@@ -144,3 +144,17 @@ func (s *apiServer) Remove(ctx context.Context, r *pb.DirEnt) (*pb.WriteResponse
 	// TODO: Add calls to remove from backing store
 	return s.fs.Remove(r.Parent, r.Name)
 }
+
+func (s *apiServer) Symlink(ctx context.Context, r *pb.SymlinkRequest) (*pb.DirEnt, error) {
+	ts := time.Now().Unix()
+	inode := s.fl.GetID()
+	attr := &pb.Attr{
+		Inode:  inode,
+		Atime:  ts,
+		Mtime:  ts,
+		Ctime:  ts,
+		Crtime: ts,
+		Mode:   uint32(os.ModeDir | 0777),
+	}
+	return s.fs.Symlink(r.Parent, r.Name, r.Target, attr, inode)
+}
