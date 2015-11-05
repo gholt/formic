@@ -19,8 +19,8 @@ import (
 
 var (
 	tls      = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
-	certFile = flag.String("cert_file", "server.crt", "The TLS cert file")
-	keyFile  = flag.String("key_file", "server.key", "The TLS key file")
+	certFile = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
+	keyFile  = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
 	port     = flag.Int("port", 8443, "The server port")
 	oortHost = flag.String("oorthost", "127.0.0.1:6379", "host:port to use when connecting to oort")
 )
