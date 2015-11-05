@@ -112,8 +112,8 @@ func (m *DirEnt) GetAttr() *Attr {
 
 // DirEntries just contains a list of directory entries
 type DirEntries struct {
-	DirEntries  []*DirEnt `protobuf:"bytes,1,rep" json:"DirEntries,omitempty"`
-	FileEntries []*DirEnt `protobuf:"bytes,2,rep" json:"FileEntries,omitempty"`
+	DirEntries  []*DirEnt `protobuf:"bytes,1,rep,name=DirEntries" json:"DirEntries,omitempty"`
+	FileEntries []*DirEnt `protobuf:"bytes,2,rep,name=FileEntries" json:"FileEntries,omitempty"`
 }
 
 func (m *DirEntries) Reset()         { *m = DirEntries{} }
@@ -132,6 +132,16 @@ func (m *DirEntries) GetFileEntries() []*DirEnt {
 		return m.FileEntries
 	}
 	return nil
+}
+
+func init() {
+	proto1.RegisterType((*Node)(nil), "proto.Node")
+	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
+	proto1.RegisterType((*Attr)(nil), "proto.Attr")
+	proto1.RegisterType((*FileChunk)(nil), "proto.FileChunk")
+	proto1.RegisterType((*WriteResponse)(nil), "proto.WriteResponse")
+	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
+	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -259,9 +269,9 @@ func RegisterApiServer(s *grpc.Server, srv ApiServer) {
 	s.RegisterService(&_Api_serviceDesc, srv)
 }
 
-func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(Attr)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).SetAttr(ctx, in)
@@ -271,9 +281,9 @@ func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, codec grpc.Codec
 	return out, nil
 }
 
-func _Api_GetAttr_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_GetAttr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(Node)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).GetAttr(ctx, in)
@@ -283,9 +293,9 @@ func _Api_GetAttr_Handler(srv interface{}, ctx context.Context, codec grpc.Codec
 	return out, nil
 }
 
-func _Api_Read_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(Node)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).Read(ctx, in)
@@ -295,9 +305,9 @@ func _Api_Read_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, b
 	return out, nil
 }
 
-func _Api_Write_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_Write_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(FileChunk)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).Write(ctx, in)
@@ -307,9 +317,9 @@ func _Api_Write_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, 
 	return out, nil
 }
 
-func _Api_MkDir_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_MkDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(DirEnt)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).MkDir(ctx, in)
@@ -319,9 +329,9 @@ func _Api_MkDir_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, 
 	return out, nil
 }
 
-func _Api_Create_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(DirEnt)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).Create(ctx, in)
@@ -331,9 +341,9 @@ func _Api_Create_Handler(srv interface{}, ctx context.Context, codec grpc.Codec,
 	return out, nil
 }
 
-func _Api_Remove_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_Remove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(DirEnt)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).Remove(ctx, in)
@@ -343,9 +353,9 @@ func _Api_Remove_Handler(srv interface{}, ctx context.Context, codec grpc.Codec,
 	return out, nil
 }
 
-func _Api_Lookup_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_Lookup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(LookupRequest)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).Lookup(ctx, in)
@@ -355,9 +365,9 @@ func _Api_Lookup_Handler(srv interface{}, ctx context.Context, codec grpc.Codec,
 	return out, nil
 }
 
-func _Api_ReadDirAll_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+func _Api_ReadDirAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
 	in := new(Node)
-	if err := codec.Unmarshal(buf, in); err != nil {
+	if err := dec(in); err != nil {
 		return nil, err
 	}
 	out, err := srv.(ApiServer).ReadDirAll(ctx, in)
