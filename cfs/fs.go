@@ -81,6 +81,18 @@ func (f *fs) handle(r fuse.Request) {
 	case *fuse.ReadlinkRequest:
 		f.handleReadlink(r)
 
+	case *fuse.GetxattrRequest:
+		f.handleGetxattr(r)
+
+	case *fuse.ListxattrRequest:
+		f.handleListxattr(r)
+
+	case *fuse.SetxattrRequest:
+		f.handleSetxattr(r)
+
+	case *fuse.RemovexattrRequest:
+		f.handleRemovexattr(r)
+
 		/*
 			case *fuse.MknodRequest:
 				f.handleMknod(r)
@@ -96,18 +108,6 @@ func (f *fs) handle(r fuse.Request) {
 
 			case *fuse.LinkRequest:
 				f.handleLink(r)
-
-			case *fuse.GetxattrRequest:
-				f.handleGetxattr(r)
-
-			case *fuse.ListxattrRequest:
-				f.handleListxattr(r)
-
-			case *fuse.SetxattrRequest:
-				f.handleSetxattr(r)
-
-			case *fuse.RemovexattrRequest:
-				f.handleRemovexattr(r)
 
 			case *fuse.DestroyRequest:
 				f.handleDestroy(r)
@@ -411,7 +411,6 @@ func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 func (f *fs) handleReadlink(r *fuse.ReadlinkRequest) {
 	log.Println("Inside handleReadlink")
 	log.Println(r)
-	//resp := &fuse.Response{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	resp, err := f.rpc.api.Readlink(rctx, &pb.Node{Inode: uint64(r.Node)})
 	if err != nil {
@@ -428,22 +427,72 @@ func (f *fs) handleLink(r *fuse.LinkRequest) {
 
 func (f *fs) handleGetxattr(r *fuse.GetxattrRequest) {
 	log.Println("Inside handleGetxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.GetxattrRequest{
+		Inode:    uint64(r.Node),
+		Name:     r.Name,
+		Size:     r.Size,
+		Position: r.Position,
+	}
+	resp, err := f.rpc.api.Getxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Getxattr failed: %v", err)
+	}
+	fuse_resp := &fuse.GetxattrResponse{Xattr: resp.Xattr}
+	log.Println(fuse_resp)
+	r.Respond(fuse_resp)
 }
 
 func (f *fs) handleListxattr(r *fuse.ListxattrRequest) {
 	log.Println("Inside handleListxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.ListxattrRequest{
+		Inode:    uint64(r.Node),
+		Size:     r.Size,
+		Position: r.Position,
+	}
+	resp, err := f.rpc.api.Listxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Listxattr failed: %v", err)
+	}
+	fuse_resp := &fuse.ListxattrResponse{Xattr: resp.Xattr}
+	log.Println(fuse_resp)
+	r.Respond(fuse_resp)
 }
 
 func (f *fs) handleSetxattr(r *fuse.SetxattrRequest) {
 	log.Println("Inside handleSetxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.SetxattrRequest{
+		Inode:    uint64(r.Node),
+		Name:     r.Name,
+		Xattr:    r.Xattr,
+		Position: r.Position,
+		Flags:    r.Flags,
+	}
+	_, err := f.rpc.api.Setxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Setxattr failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleRemovexattr(r *fuse.RemovexattrRequest) {
 	log.Println("Inside handleRemovexattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.RemovexattrRequest{
+		Inode: uint64(r.Node),
+		Name:  r.Name,
+	}
+	_, err := f.rpc.api.Removexattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Removexattr failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleDestroy(r *fuse.DestroyRequest) {

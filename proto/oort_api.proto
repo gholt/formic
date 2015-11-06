@@ -15,6 +15,10 @@ service Api {
     rpc ReadDirAll(Node) returns (DirEntries) {}
     rpc Symlink(SymlinkRequest) returns (DirEnt) {}
     rpc Readlink(Node) returns (ReadlinkResponse) {}
+    rpc Getxattr(GetxattrRequest) returns (GetxattrResponse) {}
+    rpc Setxattr(SetxattrRequest) returns (SetxattrResponse) {}
+    rpc Listxattr(ListxattrRequest) returns (ListxattrResponse) {}
+    rpc Removexattr(RemovexattrRequest) returns (RemovexattrResponse) {}
 }
 
 // Node is the file inode
@@ -81,3 +85,41 @@ message SymlinkRequest {
 message ReadlinkResponse {
     string target = 1;
 }
+
+// Getxattr
+message GetxattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+    uint32  size = 3;
+    uint32  position = 4;
+}
+message GetxattrResponse {
+    bytes xattr = 1;
+}
+
+// Setxattr
+message SetxattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+    bytes xattr = 3;
+    uint32 position = 4;
+    uint32 flags = 5;
+}
+message SetxattrResponse {}
+
+// Listxattr
+message ListxattrRequest {
+    uint64 inode = 1;
+    uint32  size = 2;
+    uint32  position = 3;
+}
+message ListxattrResponse {
+    bytes xattr = 1;
+}
+
+// Removexattr
+message RemovexattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+}
+message RemovexattrResponse {}

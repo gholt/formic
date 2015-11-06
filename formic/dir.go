@@ -17,6 +17,10 @@ type DirService interface {
 	Remove(parent uint64, name string) (*pb.WriteResponse, error)
 	Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.DirEnt, error)
 	Readlink(inode uint64) (*pb.ReadlinkResponse, error)
+	Getxattr(*pb.GetxattrRequest) (*pb.GetxattrResponse, error)
+	Setxattr(*pb.SetxattrRequest) (*pb.SetxattrResponse, error)
+	Listxattr(*pb.ListxattrRequest) (*pb.ListxattrResponse, error)
+	Removexattr(*pb.RemovexattrRequest) (*pb.RemovexattrResponse, error)
 }
 
 // In memory implementation of DirService
@@ -40,6 +44,7 @@ type Entry struct {
 	nodeCount uint64            // uint64
 	islink    bool
 	target    string
+	xattrs    map[string][]byte
 }
 
 func (fs *InMemFS) GetAttr(inode uint64) (*pb.Attr, error) {
@@ -70,10 +75,11 @@ func (fs *InMemFS) Create(parent, inode uint64, name string, attr *pb.Attr, isdi
 		return &pb.DirEnt{}, nil
 	}
 	entry := &Entry{
-		path:  name,
-		inode: inode,
-		isdir: isdir,
-		attr:  attr,
+		path:   name,
+		inode:  inode,
+		isdir:  isdir,
+		attr:   attr,
+		xattrs: make(map[string][]byte),
 	}
 	if isdir {
 		entry.entries = make(map[string]uint64)
@@ -145,6 +151,7 @@ func (fs *InMemFS) Symlink(parent uint64, name string, target string, attr *pb.A
 		islink: true,
 		target: target,
 		attr:   attr,
+		xattrs: make(map[string][]byte),
 	}
 	fs.nodes[inode] = entry
 	fs.nodes[parent].entries[name] = inode
@@ -157,4 +164,46 @@ func (fs *InMemFS) Readlink(inode uint64) (*pb.ReadlinkResponse, error) {
 	fs.RLock()
 	defer fs.RUnlock()
 	return &pb.ReadlinkResponse{Target: fs.nodes[inode].target}, nil
+}
+
+func (fs *InMemFS) Getxattr(r *pb.GetxattrRequest) (*pb.GetxattrResponse, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+	if xattr, ok := fs.nodes[r.Inode].xattrs[r.Name]; ok {
+		return &pb.GetxattrResponse{Xattr: xattr}, nil
+	}
+	return &pb.GetxattrResponse{}, nil
+}
+
+func (fs *InMemFS) Setxattr(r *pb.SetxattrRequest) (*pb.SetxattrResponse, error) {
+	fs.Lock()
+	defer fs.Unlock()
+	if entry, ok := fs.nodes[r.Inode]; ok {
+		entry.xattrs[r.Name] = r.Xattr
+	}
+	return &pb.SetxattrResponse{}, nil
+}
+
+func (fs *InMemFS) Listxattr(r *pb.ListxattrRequest) (*pb.ListxattrResponse, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+	resp := &pb.ListxattrResponse{}
+	if entry, ok := fs.nodes[r.Inode]; ok {
+		names := ""
+		for name := range entry.xattrs {
+			names += name
+			names += "\x00"
+		}
+		resp.Xattr = []byte(names)
+	}
+	return resp, nil
+}
+
+func (fs *InMemFS) Removexattr(r *pb.RemovexattrRequest) (*pb.RemovexattrResponse, error) {
+	fs.Lock()
+	defer fs.Unlock()
+	if entry, ok := fs.nodes[r.Inode]; ok {
+		delete(entry.xattrs, r.Name)
+	}
+	return &pb.RemovexattrResponse{}, nil
 }

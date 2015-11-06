@@ -163,3 +163,19 @@ func (s *apiServer) Symlink(ctx context.Context, r *pb.SymlinkRequest) (*pb.DirE
 func (s *apiServer) Readlink(ctx context.Context, n *pb.Node) (*pb.ReadlinkResponse, error) {
 	return s.fs.Readlink(n.Inode)
 }
+
+func (s *apiServer) Getxattr(ctx context.Context, r *pb.GetxattrRequest) (*pb.GetxattrResponse, error) {
+	return s.fs.Getxattr(r)
+}
+
+func (s *apiServer) Setxattr(ctx context.Context, r *pb.SetxattrRequest) (*pb.SetxattrResponse, error) {
+	return s.fs.Setxattr(r)
+}
+
+func (s *apiServer) Listxattr(ctx context.Context, r *pb.ListxattrRequest) (*pb.ListxattrResponse, error) {
+	return s.fs.Listxattr(r)
+}
+
+func (s *apiServer) Removexattr(ctx context.Context, r *pb.RemovexattrRequest) (*pb.RemovexattrResponse, error) {
+	return s.fs.Removexattr(r)
+}
