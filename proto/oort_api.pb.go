@@ -16,6 +16,8 @@ It has these top-level messages:
 	WriteResponse
 	DirEnt
 	DirEntries
+	SymlinkRequest
+	ReadlinkResponse
 */
 package proto
 
@@ -134,6 +136,26 @@ func (m *DirEntries) GetFileEntries() []*DirEnt {
 	return nil
 }
 
+// Symlink
+type SymlinkRequest struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+	Target string `protobuf:"bytes,3,opt,name=target" json:"target,omitempty"`
+}
+
+func (m *SymlinkRequest) Reset()         { *m = SymlinkRequest{} }
+func (m *SymlinkRequest) String() string { return proto1.CompactTextString(m) }
+func (*SymlinkRequest) ProtoMessage()    {}
+
+// Readlink
+type ReadlinkResponse struct {
+	Target string `protobuf:"bytes,1,opt,name=target" json:"target,omitempty"`
+}
+
+func (m *ReadlinkResponse) Reset()         { *m = ReadlinkResponse{} }
+func (m *ReadlinkResponse) String() string { return proto1.CompactTextString(m) }
+func (*ReadlinkResponse) ProtoMessage()    {}
+
 func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
 	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
@@ -142,6 +164,8 @@ func init() {
 	proto1.RegisterType((*WriteResponse)(nil), "proto.WriteResponse")
 	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
 	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
+	proto1.RegisterType((*SymlinkRequest)(nil), "proto.SymlinkRequest")
+	proto1.RegisterType((*ReadlinkResponse)(nil), "proto.ReadlinkResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -160,6 +184,8 @@ type ApiClient interface {
 	Remove(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*WriteResponse, error)
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*DirEnt, error)
 	ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallOption) (*DirEntries, error)
+	Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*DirEnt, error)
+	Readlink(ctx context.Context, in *Node, opts ...grpc.CallOption) (*ReadlinkResponse, error)
 }
 
 type apiClient struct {
@@ -251,6 +277,24 @@ func (c *apiClient) ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallO
 	return out, nil
 }
 
+func (c *apiClient) Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*DirEnt, error) {
+	out := new(DirEnt)
+	err := grpc.Invoke(ctx, "/proto.Api/Symlink", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) Readlink(ctx context.Context, in *Node, opts ...grpc.CallOption) (*ReadlinkResponse, error) {
+	out := new(ReadlinkResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Readlink", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Api service
 
 type ApiServer interface {
@@ -263,6 +307,8 @@ type ApiServer interface {
 	Remove(context.Context, *DirEnt) (*WriteResponse, error)
 	Lookup(context.Context, *LookupRequest) (*DirEnt, error)
 	ReadDirAll(context.Context, *Node) (*DirEntries, error)
+	Symlink(context.Context, *SymlinkRequest) (*DirEnt, error)
+	Readlink(context.Context, *Node) (*ReadlinkResponse, error)
 }
 
 func RegisterApiServer(s *grpc.Server, srv ApiServer) {
@@ -377,6 +423,30 @@ func _Api_ReadDirAll_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return out, nil
 }
 
+func _Api_Symlink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(SymlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Symlink(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Api_Readlink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(Node)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Readlink(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 var _Api_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Api",
 	HandlerType: (*ApiServer)(nil),
@@ -416,6 +486,14 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReadDirAll",
 			Handler:    _Api_ReadDirAll_Handler,
+		},
+		{
+			MethodName: "Symlink",
+			Handler:    _Api_Symlink_Handler,
+		},
+		{
+			MethodName: "Readlink",
+			Handler:    _Api_Readlink_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},

@@ -15,6 +15,8 @@ type DirService interface {
 	Lookup(parent uint64, name string) (*pb.DirEnt, error)
 	ReadDirAll(inode uint64) (*pb.DirEntries, error)
 	Remove(parent uint64, name string) (*pb.WriteResponse, error)
+	Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.DirEnt, error)
+	Readlink(inode uint64) (*pb.ReadlinkResponse, error)
 }
 
 // In memory implementation of DirService
@@ -36,6 +38,8 @@ type Entry struct {
 	entries   map[string]uint64 // subdir/files by name
 	ientries  map[uint64]string // subdir/files by inode
 	nodeCount uint64            // uint64
+	islink    bool
+	target    string
 }
 
 func (fs *InMemFS) GetAttr(inode uint64) (*pb.Attr, error) {
@@ -126,4 +130,31 @@ func (fs *InMemFS) Update(inode, size uint64, mtime int64) {
 	// NOTE: Not sure what this function really should look like yet
 	fs.nodes[inode].attr.Size = size
 	fs.nodes[inode].attr.Mtime = mtime
+}
+
+func (fs *InMemFS) Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.DirEnt, error) {
+	fs.Lock()
+	defer fs.Unlock()
+	if _, exists := fs.nodes[parent].entries[name]; exists {
+		return &pb.DirEnt{}, nil
+	}
+	entry := &Entry{
+		path:   name,
+		inode:  inode,
+		isdir:  false,
+		islink: true,
+		target: target,
+		attr:   attr,
+	}
+	fs.nodes[inode] = entry
+	fs.nodes[parent].entries[name] = inode
+	fs.nodes[parent].ientries[inode] = name
+	atomic.AddUint64(&fs.nodes[parent].nodeCount, 1)
+	return &pb.DirEnt{Name: name, Attr: attr}, nil
+}
+
+func (fs *InMemFS) Readlink(inode uint64) (*pb.ReadlinkResponse, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+	return &pb.ReadlinkResponse{Target: fs.nodes[inode].target}, nil
 }

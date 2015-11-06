@@ -75,6 +75,12 @@ func (f *fs) handle(r fuse.Request) {
 	case *fuse.AccessRequest:
 		f.handleAccess(r)
 
+	case *fuse.SymlinkRequest:
+		f.handleSymlink(r)
+
+	case *fuse.ReadlinkRequest:
+		f.handleReadlink(r)
+
 		/*
 			case *fuse.MknodRequest:
 				f.handleMknod(r)
@@ -87,12 +93,6 @@ func (f *fs) handle(r fuse.Request) {
 
 			case *fuse.SetattrRequest:
 				f.handleSetattr(r)
-
-			case *fuse.SymlinkRequest:
-				f.handleSymlink(r)
-
-			case *fuse.ReadlinkRequest:
-				f.handleReadlink(r)
 
 			case *fuse.LinkRequest:
 				f.handleLink(r)
@@ -394,12 +394,31 @@ func (f *fs) handleStatfs(r *fuse.StatfsRequest) {
 
 func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 	log.Println("Inside handleSymlink")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	resp := &fuse.SymlinkResponse{}
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	symlink, err := f.rpc.api.Symlink(rctx, &pb.SymlinkRequest{Parent: uint64(r.Node), Name: r.NewName, Target: r.Target})
+	if err != nil {
+		log.Fatalf("Symlink failed: %v", err)
+	}
+	resp.Node = fuse.NodeID(symlink.Attr.Inode)
+	recvAttr(symlink.Attr, &resp.Attr)
+	resp.EntryValid = 5 * time.Second
+	log.Println(resp)
+	r.Respond(resp)
 }
 
 func (f *fs) handleReadlink(r *fuse.ReadlinkRequest) {
 	log.Println("Inside handleReadlink")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	//resp := &fuse.Response{}
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	resp, err := f.rpc.api.Readlink(rctx, &pb.Node{Inode: uint64(r.Node)})
+	if err != nil {
+		log.Fatalf("Readlink failed: %v", err)
+	}
+	log.Println(resp)
+	r.Respond(resp.Target)
 }
 
 func (f *fs) handleLink(r *fuse.LinkRequest) {

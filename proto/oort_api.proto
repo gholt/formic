@@ -13,6 +13,8 @@ service Api {
     rpc Remove(DirEnt) returns (WriteResponse) {}
     rpc Lookup(LookupRequest) returns (DirEnt) {}
     rpc ReadDirAll(Node) returns (DirEntries) {}
+    rpc Symlink(SymlinkRequest) returns (DirEnt) {}
+    rpc Readlink(Node) returns (ReadlinkResponse) {}
 }
 
 // Node is the file inode
@@ -68,3 +70,14 @@ message DirEntries {
     repeated DirEnt FileEntries = 2;
 }
 
+// Symlink
+message SymlinkRequest {
+    string name     = 1;
+    uint64 parent   = 2;
+    string target   = 3;
+}
+
+// Readlink
+message ReadlinkResponse {
+    string target = 1;
+}
