@@ -16,6 +16,7 @@ type DirService interface {
 	ReadDirAll(inode uint64) (*pb.DirEntries, error)
 	Remove(parent uint64, name string) (*pb.WriteResponse, error)
 	Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.DirEnt, error)
+	Readlink(inode uint64) (*pb.ReadlinkResponse, error)
 }
 
 // In memory implementation of DirService
@@ -139,12 +140,21 @@ func (fs *InMemFS) Symlink(parent uint64, name string, target string, attr *pb.A
 	}
 	entry := &Entry{
 		path:   name,
+		inode:  inode,
+		isdir:  false,
 		islink: true,
 		target: target,
+		attr:   attr,
 	}
 	fs.nodes[inode] = entry
 	fs.nodes[parent].entries[name] = inode
 	fs.nodes[parent].ientries[inode] = name
 	atomic.AddUint64(&fs.nodes[parent].nodeCount, 1)
 	return &pb.DirEnt{Name: name, Attr: attr}, nil
+}
+
+func (fs *InMemFS) Readlink(inode uint64) (*pb.ReadlinkResponse, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+	return &pb.ReadlinkResponse{Target: fs.nodes[inode].target}, nil
 }

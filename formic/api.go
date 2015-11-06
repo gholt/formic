@@ -154,7 +154,12 @@ func (s *apiServer) Symlink(ctx context.Context, r *pb.SymlinkRequest) (*pb.DirE
 		Mtime:  ts,
 		Ctime:  ts,
 		Crtime: ts,
-		Mode:   uint32(os.ModeDir | 0777),
+		Mode:   uint32(os.ModeSymlink | 0777),
+		Size:   uint64(len(r.Target)),
 	}
 	return s.fs.Symlink(r.Parent, r.Name, r.Target, attr, inode)
+}
+
+func (s *apiServer) Readlink(ctx context.Context, n *pb.Node) (*pb.ReadlinkResponse, error) {
+	return s.fs.Readlink(n.Inode)
 }
