@@ -114,6 +114,7 @@ func main() {
 		fuse.LocalVolume(),
 		fuse.VolumeName("CFS"),
 		//fuse.AllowOther(),
+		fuse.DefaultPermissions(),
 	)
 	if err != nil {
 		log.Fatal(err)

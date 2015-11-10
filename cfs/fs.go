@@ -340,10 +340,11 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 		a.SetGid = true
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := f.rpc.api.SetAttr(rctx, a)
+	attr, err := f.rpc.api.SetAttr(rctx, a)
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
+	recvAttr(attr, &resp.Attr)
 	log.Println(resp)
 	r.Respond(resp)
 }
