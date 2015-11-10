@@ -19,6 +19,7 @@ service Api {
     rpc Setxattr(SetxattrRequest) returns (SetxattrResponse) {}
     rpc Listxattr(ListxattrRequest) returns (ListxattrResponse) {}
     rpc Removexattr(RemovexattrRequest) returns (RemovexattrResponse) {}
+    rpc Rename(RenameRequest) returns (RenameResponse) {}
 }
 
 // Node is the file inode
@@ -139,3 +140,12 @@ message RemovexattrRequest {
     string name = 2;
 }
 message RemovexattrResponse {}
+
+// Rename
+message RenameRequest {
+    uint64 parent  = 1;
+    uint64 newDir  = 2;
+    string oldName = 3;
+    string newName = 4;
+}
+message RenameResponse {}

@@ -27,6 +27,8 @@ It has these top-level messages:
 	ListxattrResponse
 	RemovexattrRequest
 	RemovexattrResponse
+	RenameRequest
+	RenameResponse
 */
 package proto
 
@@ -261,6 +263,25 @@ func (m *RemovexattrResponse) Reset()         { *m = RemovexattrResponse{} }
 func (m *RemovexattrResponse) String() string { return proto1.CompactTextString(m) }
 func (*RemovexattrResponse) ProtoMessage()    {}
 
+// Rename
+type RenameRequest struct {
+	Parent  uint64 `protobuf:"varint,1,opt,name=parent" json:"parent,omitempty"`
+	NewDir  uint64 `protobuf:"varint,2,opt,name=newDir" json:"newDir,omitempty"`
+	OldName string `protobuf:"bytes,3,opt,name=oldName" json:"oldName,omitempty"`
+	NewName string `protobuf:"bytes,4,opt,name=newName" json:"newName,omitempty"`
+}
+
+func (m *RenameRequest) Reset()         { *m = RenameRequest{} }
+func (m *RenameRequest) String() string { return proto1.CompactTextString(m) }
+func (*RenameRequest) ProtoMessage()    {}
+
+type RenameResponse struct {
+}
+
+func (m *RenameResponse) Reset()         { *m = RenameResponse{} }
+func (m *RenameResponse) String() string { return proto1.CompactTextString(m) }
+func (*RenameResponse) ProtoMessage()    {}
+
 func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
 	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
@@ -280,6 +301,8 @@ func init() {
 	proto1.RegisterType((*ListxattrResponse)(nil), "proto.ListxattrResponse")
 	proto1.RegisterType((*RemovexattrRequest)(nil), "proto.RemovexattrRequest")
 	proto1.RegisterType((*RemovexattrResponse)(nil), "proto.RemovexattrResponse")
+	proto1.RegisterType((*RenameRequest)(nil), "proto.RenameRequest")
+	proto1.RegisterType((*RenameResponse)(nil), "proto.RenameResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -304,6 +327,7 @@ type ApiClient interface {
 	Setxattr(ctx context.Context, in *SetxattrRequest, opts ...grpc.CallOption) (*SetxattrResponse, error)
 	Listxattr(ctx context.Context, in *ListxattrRequest, opts ...grpc.CallOption) (*ListxattrResponse, error)
 	Removexattr(ctx context.Context, in *RemovexattrRequest, opts ...grpc.CallOption) (*RemovexattrResponse, error)
+	Rename(ctx context.Context, in *RenameRequest, opts ...grpc.CallOption) (*RenameResponse, error)
 }
 
 type apiClient struct {
@@ -449,6 +473,15 @@ func (c *apiClient) Removexattr(ctx context.Context, in *RemovexattrRequest, opt
 	return out, nil
 }
 
+func (c *apiClient) Rename(ctx context.Context, in *RenameRequest, opts ...grpc.CallOption) (*RenameResponse, error) {
+	out := new(RenameResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Rename", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Api service
 
 type ApiServer interface {
@@ -467,6 +500,7 @@ type ApiServer interface {
 	Setxattr(context.Context, *SetxattrRequest) (*SetxattrResponse, error)
 	Listxattr(context.Context, *ListxattrRequest) (*ListxattrResponse, error)
 	Removexattr(context.Context, *RemovexattrRequest) (*RemovexattrResponse, error)
+	Rename(context.Context, *RenameRequest) (*RenameResponse, error)
 }
 
 func RegisterApiServer(s *grpc.Server, srv ApiServer) {
@@ -653,6 +687,18 @@ func _Api_Removexattr_Handler(srv interface{}, ctx context.Context, dec func(int
 	return out, nil
 }
 
+func _Api_Rename_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(RenameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Rename(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 var _Api_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Api",
 	HandlerType: (*ApiServer)(nil),
@@ -716,6 +762,10 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Removexattr",
 			Handler:    _Api_Removexattr_Handler,
+		},
+		{
+			MethodName: "Rename",
+			Handler:    _Api_Rename_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},

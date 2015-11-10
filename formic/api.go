@@ -179,3 +179,7 @@ func (s *apiServer) Listxattr(ctx context.Context, r *pb.ListxattrRequest) (*pb.
 func (s *apiServer) Removexattr(ctx context.Context, r *pb.RemovexattrRequest) (*pb.RemovexattrResponse, error) {
 	return s.fs.Removexattr(r)
 }
+
+func (s *apiServer) Rename(ctx context.Context, r *pb.RenameRequest) (*pb.RenameResponse, error) {
+	return s.fs.Rename(r)
+}

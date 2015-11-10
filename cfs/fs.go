@@ -93,6 +93,9 @@ func (f *fs) handle(r fuse.Request) {
 	case *fuse.RemovexattrRequest:
 		f.handleRemovexattr(r)
 
+	case *fuse.RenameRequest:
+		f.handleRename(r)
+
 		/*
 			case *fuse.MknodRequest:
 				f.handleMknod(r)
@@ -111,9 +114,6 @@ func (f *fs) handle(r fuse.Request) {
 
 			case *fuse.DestroyRequest:
 				f.handleDestroy(r)
-
-			case *fuse.RenameRequest:
-				f.handleRename(r)
 
 			case *fuse.FsyncRequest:
 				f.handleFsync(r)
@@ -517,7 +517,13 @@ func (f *fs) handleDestroy(r *fuse.DestroyRequest) {
 
 func (f *fs) handleRename(r *fuse.RenameRequest) {
 	log.Println("Inside handleRename")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	_, err := f.rpc.api.Rename(rctx, &pb.RenameRequest{Parent: uint64(r.Node), NewDir: uint64(r.NewDir), OldName: r.OldName, NewName: r.NewName})
+	if err != nil {
+		log.Fatalf("Rename failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleFsync(r *fuse.FsyncRequest) {

@@ -21,6 +21,7 @@ type DirService interface {
 	Setxattr(*pb.SetxattrRequest) (*pb.SetxattrResponse, error)
 	Listxattr(*pb.ListxattrRequest) (*pb.ListxattrResponse, error)
 	Removexattr(*pb.RemovexattrRequest) (*pb.RemovexattrResponse, error)
+	Rename(*pb.RenameRequest) (*pb.RenameResponse, error)
 }
 
 // In memory implementation of DirService
@@ -218,4 +219,21 @@ func (fs *InMemFS) Removexattr(r *pb.RemovexattrRequest) (*pb.RemovexattrRespons
 		delete(entry.xattrs, r.Name)
 	}
 	return &pb.RemovexattrResponse{}, nil
+}
+
+func (fs *InMemFS) Rename(r *pb.RenameRequest) (*pb.RenameResponse, error) {
+	fs.Lock()
+	defer fs.Unlock()
+	if inode, ok := fs.nodes[r.Parent].entries[r.OldName]; ok {
+		// remove old
+		delete(fs.nodes[r.Parent].entries, r.OldName)
+		delete(fs.nodes[r.Parent].ientries, inode)
+		atomic.AddUint64(&fs.nodes[r.Parent].nodeCount, ^uint64(0)) // -1
+		// add new
+		fs.nodes[inode].path = r.NewName
+		fs.nodes[r.NewDir].entries[r.NewName] = inode
+		fs.nodes[r.NewDir].ientries[inode] = r.NewName
+		atomic.AddUint64(&fs.nodes[r.NewDir].nodeCount, 1)
+	}
+	return &pb.RenameResponse{}, nil
 }
