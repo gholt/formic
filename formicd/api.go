@@ -16,9 +16,9 @@ import (
 
 type apiServer struct {
 	sync.RWMutex
-	rpool *redis.Pool
-	fs    DirService
-	fl    *flother.Flother
+	ds DirService
+	fs FileService
+	fl *flother.Flother
 }
 
 func (s *apiServer) GetID(custID, shareID, inode, block uint64) []byte {
@@ -37,11 +37,11 @@ func (s *apiServer) GetID(custID, shareID, inode, block uint64) []byte {
 }
 
 func (s *apiServer) GetAttr(ctx context.Context, r *pb.Node) (*pb.Attr, error) {
-	return s.fs.GetAttr(r.Inode)
+	return s.ds.GetAttr(r.Inode)
 }
 
 func (s *apiServer) SetAttr(ctx context.Context, r *pb.SetAttrRequest) (*pb.Attr, error) {
-	return s.fs.SetAttr(r.Inode, r)
+	return s.ds.SetAttr(r.Inode, r)
 }
 
 func (s *apiServer) Create(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error) {
@@ -55,7 +55,7 @@ func (s *apiServer) Create(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error
 		Crtime: ts,
 		Mode:   uint32(0777),
 	}
-	return s.fs.Create(r.Parent, inode, r.Name, attr, false)
+	return s.ds.Create(r.Parent, inode, r.Name, attr, false)
 }
 
 func (s *apiServer) MkDir(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error) {
@@ -69,15 +69,14 @@ func (s *apiServer) MkDir(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error)
 		Crtime: ts,
 		Mode:   uint32(os.ModeDir | 0777),
 	}
-	return s.fs.Create(r.Parent, inode, r.Name, attr, true)
+	return s.ds.Create(r.Parent, inode, r.Name, attr, true)
 }
 
 func (s *apiServer) Read(ctx context.Context, r *pb.Node) (*pb.FileChunk, error) {
 	var err error
-	rc := s.rpool.Get()
-	defer rc.Close()
 	// TODO: Add support for reading blocks
-	data, err := redis.Bytes(rc.Do("GET", s.GetID(1, 1, r.Inode, uint64(0))))
+	id := s.GetID(1, 1, r.Inode, uint64(0))
+	data, err := s.fs.GetChunk(id)
 	if err != nil {
 		if err == redis.ErrNil {
 			//file is empty or doesn't exist yet.
@@ -106,43 +105,42 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 			// Handle non-aligned offset
 			firstOffset = r.Offset - int64(block)*blockSize
 		} */
-	rc := s.rpool.Get()
-	defer rc.Close()
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
 		sendSize := min(blockSize, int64(len(r.Payload))-cur)
 		payload := r.Payload[cur : cur+sendSize]
+		id := s.GetID(1, 1, r.Inode, block)
 		if sendSize < blockSize {
 			// need to get the block and update
-			data, err := redis.Bytes(rc.Do("GET", s.GetID(1, 1, r.Inode, block)))
+			data, err := s.fs.GetChunk(id)
 			// TODO: Need better error handling for when there is a block but it can't retreive it
 			if err != nil && len(payload) < len(data) {
 				copy(data, payload)
 				payload = data
 			}
 		}
-		_, err := rc.Do("SET", s.GetID(1, 1, r.Inode, block), r.Payload[cur:cur+sendSize])
+		err := s.fs.WriteChunk(id, r.Payload[cur:cur+sendSize])
 		// TODO: Need better error handling for failing with multiple chunks
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
-		s.fs.Update(r.Inode, uint64(len(r.Payload)), time.Now().Unix())
+		s.ds.Update(r.Inode, uint64(len(r.Payload)), time.Now().Unix())
 		cur += sendSize
 	}
 	return &pb.WriteResponse{Status: 0}, nil
 }
 
 func (s *apiServer) Lookup(ctx context.Context, r *pb.LookupRequest) (*pb.DirEnt, error) {
-	return s.fs.Lookup(r.Parent, r.Name)
+	return s.ds.Lookup(r.Parent, r.Name)
 }
 
 func (s *apiServer) ReadDirAll(ctx context.Context, n *pb.Node) (*pb.DirEntries, error) {
-	return s.fs.ReadDirAll(n.Inode)
+	return s.ds.ReadDirAll(n.Inode)
 }
 
 func (s *apiServer) Remove(ctx context.Context, r *pb.DirEnt) (*pb.WriteResponse, error) {
 	// TODO: Add calls to remove from backing store
-	return s.fs.Remove(r.Parent, r.Name)
+	return s.ds.Remove(r.Parent, r.Name)
 }
 
 func (s *apiServer) Symlink(ctx context.Context, r *pb.SymlinkRequest) (*pb.DirEnt, error) {
@@ -157,29 +155,29 @@ func (s *apiServer) Symlink(ctx context.Context, r *pb.SymlinkRequest) (*pb.DirE
 		Mode:   uint32(os.ModeSymlink | 0777),
 		Size:   uint64(len(r.Target)),
 	}
-	return s.fs.Symlink(r.Parent, r.Name, r.Target, attr, inode)
+	return s.ds.Symlink(r.Parent, r.Name, r.Target, attr, inode)
 }
 
 func (s *apiServer) Readlink(ctx context.Context, n *pb.Node) (*pb.ReadlinkResponse, error) {
-	return s.fs.Readlink(n.Inode)
+	return s.ds.Readlink(n.Inode)
 }
 
 func (s *apiServer) Getxattr(ctx context.Context, r *pb.GetxattrRequest) (*pb.GetxattrResponse, error) {
-	return s.fs.Getxattr(r)
+	return s.ds.Getxattr(r)
 }
 
 func (s *apiServer) Setxattr(ctx context.Context, r *pb.SetxattrRequest) (*pb.SetxattrResponse, error) {
-	return s.fs.Setxattr(r)
+	return s.ds.Setxattr(r)
 }
 
 func (s *apiServer) Listxattr(ctx context.Context, r *pb.ListxattrRequest) (*pb.ListxattrResponse, error) {
-	return s.fs.Listxattr(r)
+	return s.ds.Listxattr(r)
 }
 
 func (s *apiServer) Removexattr(ctx context.Context, r *pb.RemovexattrRequest) (*pb.RemovexattrResponse, error) {
-	return s.fs.Removexattr(r)
+	return s.ds.Removexattr(r)
 }
 
 func (s *apiServer) Rename(ctx context.Context, r *pb.RenameRequest) (*pb.RenameResponse, error) {
-	return s.fs.Rename(r)
+	return s.ds.Rename(r)
 }
