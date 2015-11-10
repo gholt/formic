@@ -4,7 +4,7 @@ package proto;
 
 // Combinded ClientApi
 service Api {
-    rpc SetAttr(Attr) returns (Attr) {}
+    rpc SetAttr(SetAttrRequest) returns (Attr) {}
     rpc GetAttr(Node) returns (Attr)     {}
     rpc Read(Node) returns (FileChunk) {}
     rpc Write(FileChunk) returns (WriteResponse) {}
@@ -15,6 +15,11 @@ service Api {
     rpc ReadDirAll(Node) returns (DirEntries) {}
     rpc Symlink(SymlinkRequest) returns (DirEnt) {}
     rpc Readlink(Node) returns (ReadlinkResponse) {}
+    rpc Getxattr(GetxattrRequest) returns (GetxattrResponse) {}
+    rpc Setxattr(SetxattrRequest) returns (SetxattrResponse) {}
+    rpc Listxattr(ListxattrRequest) returns (ListxattrResponse) {}
+    rpc Removexattr(RemovexattrRequest) returns (RemovexattrResponse) {}
+    rpc Rename(RenameRequest) returns (RenameResponse) {}
 }
 
 // Node is the file inode
@@ -41,6 +46,22 @@ message Attr {
     uint32 mode   = 6;
     int32  valid  = 7;
     uint64 size   = 8;
+    uint32 uid    = 9;
+    uint32 gid    = 10;
+}
+
+message SetAttrRequest {
+    bool   setMode  = 1;
+    bool   setMtime = 2;
+    bool   setSize  = 3;
+    bool   setUid   = 4;
+    bool   setGid   = 5;
+    uint64 inode     = 6;
+    int64  mtime     = 7;
+    uint32 mode      = 8;
+    uint64 size      = 9;
+    uint32 uid       = 10;
+    uint32 gid       = 11;
 }
 
 // WriteRequest
@@ -81,3 +102,50 @@ message SymlinkRequest {
 message ReadlinkResponse {
     string target = 1;
 }
+
+// Getxattr
+message GetxattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+    uint32  size = 3;
+    uint32  position = 4;
+}
+message GetxattrResponse {
+    bytes xattr = 1;
+}
+
+// Setxattr
+message SetxattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+    bytes xattr = 3;
+    uint32 position = 4;
+    uint32 flags = 5;
+}
+message SetxattrResponse {}
+
+// Listxattr
+message ListxattrRequest {
+    uint64 inode = 1;
+    uint32  size = 2;
+    uint32  position = 3;
+}
+message ListxattrResponse {
+    bytes xattr = 1;
+}
+
+// Removexattr
+message RemovexattrRequest {
+    uint64 inode = 1;
+    string name = 2;
+}
+message RemovexattrResponse {}
+
+// Rename
+message RenameRequest {
+    uint64 parent  = 1;
+    uint64 newDir  = 2;
+    string oldName = 3;
+    string newName = 4;
+}
+message RenameResponse {}

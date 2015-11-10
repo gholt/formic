@@ -12,12 +12,23 @@ It has these top-level messages:
 	Node
 	LookupRequest
 	Attr
+	SetAttrRequest
 	FileChunk
 	WriteResponse
 	DirEnt
 	DirEntries
 	SymlinkRequest
 	ReadlinkResponse
+	GetxattrRequest
+	GetxattrResponse
+	SetxattrRequest
+	SetxattrResponse
+	ListxattrRequest
+	ListxattrResponse
+	RemovexattrRequest
+	RemovexattrResponse
+	RenameRequest
+	RenameResponse
 */
 package proto
 
@@ -67,11 +78,31 @@ type Attr struct {
 	Mode   uint32 `protobuf:"varint,6,opt,name=mode" json:"mode,omitempty"`
 	Valid  int32  `protobuf:"varint,7,opt,name=valid" json:"valid,omitempty"`
 	Size   uint64 `protobuf:"varint,8,opt,name=size" json:"size,omitempty"`
+	Uid    uint32 `protobuf:"varint,9,opt,name=uid" json:"uid,omitempty"`
+	Gid    uint32 `protobuf:"varint,10,opt,name=gid" json:"gid,omitempty"`
 }
 
 func (m *Attr) Reset()         { *m = Attr{} }
 func (m *Attr) String() string { return proto1.CompactTextString(m) }
 func (*Attr) ProtoMessage()    {}
+
+type SetAttrRequest struct {
+	SetMode  bool   `protobuf:"varint,1,opt,name=setMode" json:"setMode,omitempty"`
+	SetMtime bool   `protobuf:"varint,2,opt,name=setMtime" json:"setMtime,omitempty"`
+	SetSize  bool   `protobuf:"varint,3,opt,name=setSize" json:"setSize,omitempty"`
+	SetUid   bool   `protobuf:"varint,4,opt,name=setUid" json:"setUid,omitempty"`
+	SetGid   bool   `protobuf:"varint,5,opt,name=setGid" json:"setGid,omitempty"`
+	Inode    uint64 `protobuf:"varint,6,opt,name=inode" json:"inode,omitempty"`
+	Mtime    int64  `protobuf:"varint,7,opt,name=mtime" json:"mtime,omitempty"`
+	Mode     uint32 `protobuf:"varint,8,opt,name=mode" json:"mode,omitempty"`
+	Size     uint64 `protobuf:"varint,9,opt,name=size" json:"size,omitempty"`
+	Uid      uint32 `protobuf:"varint,10,opt,name=uid" json:"uid,omitempty"`
+	Gid      uint32 `protobuf:"varint,11,opt,name=gid" json:"gid,omitempty"`
+}
+
+func (m *SetAttrRequest) Reset()         { *m = SetAttrRequest{} }
+func (m *SetAttrRequest) String() string { return proto1.CompactTextString(m) }
+func (*SetAttrRequest) ProtoMessage()    {}
 
 // WriteRequest
 type FileChunk struct {
@@ -156,16 +187,122 @@ func (m *ReadlinkResponse) Reset()         { *m = ReadlinkResponse{} }
 func (m *ReadlinkResponse) String() string { return proto1.CompactTextString(m) }
 func (*ReadlinkResponse) ProtoMessage()    {}
 
+// Getxattr
+type GetxattrRequest struct {
+	Inode    uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+	Name     string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+	Size     uint32 `protobuf:"varint,3,opt,name=size" json:"size,omitempty"`
+	Position uint32 `protobuf:"varint,4,opt,name=position" json:"position,omitempty"`
+}
+
+func (m *GetxattrRequest) Reset()         { *m = GetxattrRequest{} }
+func (m *GetxattrRequest) String() string { return proto1.CompactTextString(m) }
+func (*GetxattrRequest) ProtoMessage()    {}
+
+type GetxattrResponse struct {
+	Xattr []byte `protobuf:"bytes,1,opt,name=xattr,proto3" json:"xattr,omitempty"`
+}
+
+func (m *GetxattrResponse) Reset()         { *m = GetxattrResponse{} }
+func (m *GetxattrResponse) String() string { return proto1.CompactTextString(m) }
+func (*GetxattrResponse) ProtoMessage()    {}
+
+// Setxattr
+type SetxattrRequest struct {
+	Inode    uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+	Name     string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+	Xattr    []byte `protobuf:"bytes,3,opt,name=xattr,proto3" json:"xattr,omitempty"`
+	Position uint32 `protobuf:"varint,4,opt,name=position" json:"position,omitempty"`
+	Flags    uint32 `protobuf:"varint,5,opt,name=flags" json:"flags,omitempty"`
+}
+
+func (m *SetxattrRequest) Reset()         { *m = SetxattrRequest{} }
+func (m *SetxattrRequest) String() string { return proto1.CompactTextString(m) }
+func (*SetxattrRequest) ProtoMessage()    {}
+
+type SetxattrResponse struct {
+}
+
+func (m *SetxattrResponse) Reset()         { *m = SetxattrResponse{} }
+func (m *SetxattrResponse) String() string { return proto1.CompactTextString(m) }
+func (*SetxattrResponse) ProtoMessage()    {}
+
+// Listxattr
+type ListxattrRequest struct {
+	Inode    uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+	Size     uint32 `protobuf:"varint,2,opt,name=size" json:"size,omitempty"`
+	Position uint32 `protobuf:"varint,3,opt,name=position" json:"position,omitempty"`
+}
+
+func (m *ListxattrRequest) Reset()         { *m = ListxattrRequest{} }
+func (m *ListxattrRequest) String() string { return proto1.CompactTextString(m) }
+func (*ListxattrRequest) ProtoMessage()    {}
+
+type ListxattrResponse struct {
+	Xattr []byte `protobuf:"bytes,1,opt,name=xattr,proto3" json:"xattr,omitempty"`
+}
+
+func (m *ListxattrResponse) Reset()         { *m = ListxattrResponse{} }
+func (m *ListxattrResponse) String() string { return proto1.CompactTextString(m) }
+func (*ListxattrResponse) ProtoMessage()    {}
+
+// Removexattr
+type RemovexattrRequest struct {
+	Inode uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+	Name  string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
+}
+
+func (m *RemovexattrRequest) Reset()         { *m = RemovexattrRequest{} }
+func (m *RemovexattrRequest) String() string { return proto1.CompactTextString(m) }
+func (*RemovexattrRequest) ProtoMessage()    {}
+
+type RemovexattrResponse struct {
+}
+
+func (m *RemovexattrResponse) Reset()         { *m = RemovexattrResponse{} }
+func (m *RemovexattrResponse) String() string { return proto1.CompactTextString(m) }
+func (*RemovexattrResponse) ProtoMessage()    {}
+
+// Rename
+type RenameRequest struct {
+	Parent  uint64 `protobuf:"varint,1,opt,name=parent" json:"parent,omitempty"`
+	NewDir  uint64 `protobuf:"varint,2,opt,name=newDir" json:"newDir,omitempty"`
+	OldName string `protobuf:"bytes,3,opt,name=oldName" json:"oldName,omitempty"`
+	NewName string `protobuf:"bytes,4,opt,name=newName" json:"newName,omitempty"`
+}
+
+func (m *RenameRequest) Reset()         { *m = RenameRequest{} }
+func (m *RenameRequest) String() string { return proto1.CompactTextString(m) }
+func (*RenameRequest) ProtoMessage()    {}
+
+type RenameResponse struct {
+}
+
+func (m *RenameResponse) Reset()         { *m = RenameResponse{} }
+func (m *RenameResponse) String() string { return proto1.CompactTextString(m) }
+func (*RenameResponse) ProtoMessage()    {}
+
 func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
 	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
 	proto1.RegisterType((*Attr)(nil), "proto.Attr")
+	proto1.RegisterType((*SetAttrRequest)(nil), "proto.SetAttrRequest")
 	proto1.RegisterType((*FileChunk)(nil), "proto.FileChunk")
 	proto1.RegisterType((*WriteResponse)(nil), "proto.WriteResponse")
 	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
 	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
 	proto1.RegisterType((*SymlinkRequest)(nil), "proto.SymlinkRequest")
 	proto1.RegisterType((*ReadlinkResponse)(nil), "proto.ReadlinkResponse")
+	proto1.RegisterType((*GetxattrRequest)(nil), "proto.GetxattrRequest")
+	proto1.RegisterType((*GetxattrResponse)(nil), "proto.GetxattrResponse")
+	proto1.RegisterType((*SetxattrRequest)(nil), "proto.SetxattrRequest")
+	proto1.RegisterType((*SetxattrResponse)(nil), "proto.SetxattrResponse")
+	proto1.RegisterType((*ListxattrRequest)(nil), "proto.ListxattrRequest")
+	proto1.RegisterType((*ListxattrResponse)(nil), "proto.ListxattrResponse")
+	proto1.RegisterType((*RemovexattrRequest)(nil), "proto.RemovexattrRequest")
+	proto1.RegisterType((*RemovexattrResponse)(nil), "proto.RemovexattrResponse")
+	proto1.RegisterType((*RenameRequest)(nil), "proto.RenameRequest")
+	proto1.RegisterType((*RenameResponse)(nil), "proto.RenameResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -175,7 +312,7 @@ var _ grpc.ClientConn
 // Client API for Api service
 
 type ApiClient interface {
-	SetAttr(ctx context.Context, in *Attr, opts ...grpc.CallOption) (*Attr, error)
+	SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error)
 	GetAttr(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Attr, error)
 	Read(ctx context.Context, in *Node, opts ...grpc.CallOption) (*FileChunk, error)
 	Write(ctx context.Context, in *FileChunk, opts ...grpc.CallOption) (*WriteResponse, error)
@@ -186,6 +323,11 @@ type ApiClient interface {
 	ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallOption) (*DirEntries, error)
 	Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*DirEnt, error)
 	Readlink(ctx context.Context, in *Node, opts ...grpc.CallOption) (*ReadlinkResponse, error)
+	Getxattr(ctx context.Context, in *GetxattrRequest, opts ...grpc.CallOption) (*GetxattrResponse, error)
+	Setxattr(ctx context.Context, in *SetxattrRequest, opts ...grpc.CallOption) (*SetxattrResponse, error)
+	Listxattr(ctx context.Context, in *ListxattrRequest, opts ...grpc.CallOption) (*ListxattrResponse, error)
+	Removexattr(ctx context.Context, in *RemovexattrRequest, opts ...grpc.CallOption) (*RemovexattrResponse, error)
+	Rename(ctx context.Context, in *RenameRequest, opts ...grpc.CallOption) (*RenameResponse, error)
 }
 
 type apiClient struct {
@@ -196,7 +338,7 @@ func NewApiClient(cc *grpc.ClientConn) ApiClient {
 	return &apiClient{cc}
 }
 
-func (c *apiClient) SetAttr(ctx context.Context, in *Attr, opts ...grpc.CallOption) (*Attr, error) {
+func (c *apiClient) SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error) {
 	out := new(Attr)
 	err := grpc.Invoke(ctx, "/proto.Api/SetAttr", in, out, c.cc, opts...)
 	if err != nil {
@@ -295,10 +437,55 @@ func (c *apiClient) Readlink(ctx context.Context, in *Node, opts ...grpc.CallOpt
 	return out, nil
 }
 
+func (c *apiClient) Getxattr(ctx context.Context, in *GetxattrRequest, opts ...grpc.CallOption) (*GetxattrResponse, error) {
+	out := new(GetxattrResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Getxattr", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) Setxattr(ctx context.Context, in *SetxattrRequest, opts ...grpc.CallOption) (*SetxattrResponse, error) {
+	out := new(SetxattrResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Setxattr", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) Listxattr(ctx context.Context, in *ListxattrRequest, opts ...grpc.CallOption) (*ListxattrResponse, error) {
+	out := new(ListxattrResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Listxattr", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) Removexattr(ctx context.Context, in *RemovexattrRequest, opts ...grpc.CallOption) (*RemovexattrResponse, error) {
+	out := new(RemovexattrResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Removexattr", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) Rename(ctx context.Context, in *RenameRequest, opts ...grpc.CallOption) (*RenameResponse, error) {
+	out := new(RenameResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Rename", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Api service
 
 type ApiServer interface {
-	SetAttr(context.Context, *Attr) (*Attr, error)
+	SetAttr(context.Context, *SetAttrRequest) (*Attr, error)
 	GetAttr(context.Context, *Node) (*Attr, error)
 	Read(context.Context, *Node) (*FileChunk, error)
 	Write(context.Context, *FileChunk) (*WriteResponse, error)
@@ -309,6 +496,11 @@ type ApiServer interface {
 	ReadDirAll(context.Context, *Node) (*DirEntries, error)
 	Symlink(context.Context, *SymlinkRequest) (*DirEnt, error)
 	Readlink(context.Context, *Node) (*ReadlinkResponse, error)
+	Getxattr(context.Context, *GetxattrRequest) (*GetxattrResponse, error)
+	Setxattr(context.Context, *SetxattrRequest) (*SetxattrResponse, error)
+	Listxattr(context.Context, *ListxattrRequest) (*ListxattrResponse, error)
+	Removexattr(context.Context, *RemovexattrRequest) (*RemovexattrResponse, error)
+	Rename(context.Context, *RenameRequest) (*RenameResponse, error)
 }
 
 func RegisterApiServer(s *grpc.Server, srv ApiServer) {
@@ -316,7 +508,7 @@ func RegisterApiServer(s *grpc.Server, srv ApiServer) {
 }
 
 func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(Attr)
+	in := new(SetAttrRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -447,6 +639,66 @@ func _Api_Readlink_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return out, nil
 }
 
+func _Api_Getxattr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(GetxattrRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Getxattr(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Api_Setxattr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(SetxattrRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Setxattr(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Api_Listxattr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(ListxattrRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Listxattr(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Api_Removexattr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(RemovexattrRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Removexattr(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func _Api_Rename_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(RenameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Rename(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 var _Api_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Api",
 	HandlerType: (*ApiServer)(nil),
@@ -494,6 +746,26 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Readlink",
 			Handler:    _Api_Readlink_Handler,
+		},
+		{
+			MethodName: "Getxattr",
+			Handler:    _Api_Getxattr_Handler,
+		},
+		{
+			MethodName: "Setxattr",
+			Handler:    _Api_Setxattr_Handler,
+		},
+		{
+			MethodName: "Listxattr",
+			Handler:    _Api_Listxattr_Handler,
+		},
+		{
+			MethodName: "Removexattr",
+			Handler:    _Api_Removexattr_Handler,
+		},
+		{
+			MethodName: "Rename",
+			Handler:    _Api_Rename_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},

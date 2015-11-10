@@ -81,6 +81,21 @@ func (f *fs) handle(r fuse.Request) {
 	case *fuse.ReadlinkRequest:
 		f.handleReadlink(r)
 
+	case *fuse.GetxattrRequest:
+		f.handleGetxattr(r)
+
+	case *fuse.ListxattrRequest:
+		f.handleListxattr(r)
+
+	case *fuse.SetxattrRequest:
+		f.handleSetxattr(r)
+
+	case *fuse.RemovexattrRequest:
+		f.handleRemovexattr(r)
+
+	case *fuse.RenameRequest:
+		f.handleRename(r)
+
 		/*
 			case *fuse.MknodRequest:
 				f.handleMknod(r)
@@ -97,23 +112,8 @@ func (f *fs) handle(r fuse.Request) {
 			case *fuse.LinkRequest:
 				f.handleLink(r)
 
-			case *fuse.GetxattrRequest:
-				f.handleGetxattr(r)
-
-			case *fuse.ListxattrRequest:
-				f.handleListxattr(r)
-
-			case *fuse.SetxattrRequest:
-				f.handleSetxattr(r)
-
-			case *fuse.RemovexattrRequest:
-				f.handleRemovexattr(r)
-
 			case *fuse.DestroyRequest:
 				f.handleDestroy(r)
-
-			case *fuse.RenameRequest:
-				f.handleRename(r)
 
 			case *fuse.FsyncRequest:
 				f.handleFsync(r)
@@ -129,6 +129,8 @@ func recvAttr(src *pb.Attr, dest *fuse.Attr) {
 	dest.Atime = time.Unix(src.Atime, 0)
 	dest.Ctime = time.Unix(src.Ctime, 0)
 	dest.Crtime = time.Unix(src.Crtime, 0)
+	dest.Uid = src.Uid
+	dest.Gid = src.Gid
 }
 
 func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
@@ -302,13 +304,22 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	log.Println("Inside handleSetattr")
 	log.Println(r)
 	resp := &fuse.SetattrResponse{}
-
-	// Todo: Need to read attrs in to update
+	resp.Attr.Inode = uint64(r.Node)
+	a := &pb.SetAttrRequest{
+		Inode: uint64(r.Node),
+		Mode:  uint32(r.Mode),
+		Size:  r.Size,
+		Mtime: r.Mtime.Unix(),
+		Uid:   r.Uid,
+		Gid:   r.Gid,
+	}
 	if r.Valid.Size() {
 		resp.Attr.Size = r.Size
+		a.SetSize = true
 	}
 	if r.Valid.Mode() {
 		resp.Attr.Mode = r.Mode
+		a.SetMode = true
 	}
 	if r.Valid.Atime() {
 		resp.Attr.Atime = r.Atime
@@ -318,18 +329,22 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	}
 	if r.Valid.Mtime() {
 		resp.Attr.Mtime = r.Mtime
+		a.SetMtime = true
 	}
-
-	a := &pb.Attr{
-		Mode:  uint32(r.Mode),
-		Size:  r.Size,
-		Mtime: r.Mtime.Unix(),
+	if r.Valid.Uid() {
+		resp.Attr.Uid = r.Uid
+		a.SetUid = true
+	}
+	if r.Valid.Gid() {
+		resp.Attr.Gid = r.Gid
+		a.SetGid = true
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := f.rpc.api.SetAttr(rctx, a)
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
+	log.Println(resp)
 	r.Respond(resp)
 }
 
@@ -411,7 +426,6 @@ func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 func (f *fs) handleReadlink(r *fuse.ReadlinkRequest) {
 	log.Println("Inside handleReadlink")
 	log.Println(r)
-	//resp := &fuse.Response{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	resp, err := f.rpc.api.Readlink(rctx, &pb.Node{Inode: uint64(r.Node)})
 	if err != nil {
@@ -428,22 +442,72 @@ func (f *fs) handleLink(r *fuse.LinkRequest) {
 
 func (f *fs) handleGetxattr(r *fuse.GetxattrRequest) {
 	log.Println("Inside handleGetxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.GetxattrRequest{
+		Inode:    uint64(r.Node),
+		Name:     r.Name,
+		Size:     r.Size,
+		Position: r.Position,
+	}
+	resp, err := f.rpc.api.Getxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Getxattr failed: %v", err)
+	}
+	fuse_resp := &fuse.GetxattrResponse{Xattr: resp.Xattr}
+	log.Println(fuse_resp)
+	r.Respond(fuse_resp)
 }
 
 func (f *fs) handleListxattr(r *fuse.ListxattrRequest) {
 	log.Println("Inside handleListxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.ListxattrRequest{
+		Inode:    uint64(r.Node),
+		Size:     r.Size,
+		Position: r.Position,
+	}
+	resp, err := f.rpc.api.Listxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Listxattr failed: %v", err)
+	}
+	fuse_resp := &fuse.ListxattrResponse{Xattr: resp.Xattr}
+	log.Println(fuse_resp)
+	r.Respond(fuse_resp)
 }
 
 func (f *fs) handleSetxattr(r *fuse.SetxattrRequest) {
 	log.Println("Inside handleSetxattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.SetxattrRequest{
+		Inode:    uint64(r.Node),
+		Name:     r.Name,
+		Xattr:    r.Xattr,
+		Position: r.Position,
+		Flags:    r.Flags,
+	}
+	_, err := f.rpc.api.Setxattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Setxattr failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleRemovexattr(r *fuse.RemovexattrRequest) {
 	log.Println("Inside handleRemovexattr")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	req := &pb.RemovexattrRequest{
+		Inode: uint64(r.Node),
+		Name:  r.Name,
+	}
+	_, err := f.rpc.api.Removexattr(rctx, req)
+	if err != nil {
+		log.Fatalf("Removexattr failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleDestroy(r *fuse.DestroyRequest) {
@@ -453,7 +517,13 @@ func (f *fs) handleDestroy(r *fuse.DestroyRequest) {
 
 func (f *fs) handleRename(r *fuse.RenameRequest) {
 	log.Println("Inside handleRename")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	_, err := f.rpc.api.Rename(rctx, &pb.RenameRequest{Parent: uint64(r.Node), NewDir: uint64(r.NewDir), OldName: r.OldName, NewName: r.NewName})
+	if err != nil {
+		log.Fatalf("Rename failed: %v", err)
+	}
+	r.Respond()
 }
 
 func (f *fs) handleFsync(r *fuse.FsyncRequest) {
