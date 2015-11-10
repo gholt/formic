@@ -16,9 +16,20 @@ import (
 
 type apiServer struct {
 	sync.RWMutex
-	ds DirService
-	fs FileService
-	fl *flother.Flother
+	ds        DirService
+	fs        FileService
+	fl        *flother.Flother
+	blocksize int64
+}
+
+func NewApiServer(ds DirService, fs FileService) *apiServer {
+	s := new(apiServer)
+	s.ds = ds
+	s.fs = fs
+	// TODO: Get epoch and node id from some config
+	s.fl = flother.NewFlother(time.Time{}, 1)
+	s.blocksize = int64(1024 * 64) // Default Block Size (64K)
+	return s
 }
 
 func (s *apiServer) GetID(custID, shareID, inode, block uint64) []byte {
@@ -97,20 +108,19 @@ func min(a, b int64) int64 {
 }
 
 func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteResponse, error) {
-	blockSize := int64(1024 * 64)
-	block := uint64(r.Offset / blockSize)
+	block := uint64(r.Offset / s.blocksize)
 	// TODO: Handle unaligned offsets
 	/*	firstOffset := int64(0)
-		if r.Offset%blockSize != 0 {
+		if r.Offset%s.blocksize != 0 {
 			// Handle non-aligned offset
-			firstOffset = r.Offset - int64(block)*blockSize
+			firstOffset = r.Offset - int64(block)*s.blocksize
 		} */
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
-		sendSize := min(blockSize, int64(len(r.Payload))-cur)
+		sendSize := min(s.blocksize, int64(len(r.Payload))-cur)
 		payload := r.Payload[cur : cur+sendSize]
 		id := s.GetID(1, 1, r.Inode, block)
-		if sendSize < blockSize {
+		if sendSize < s.blocksize {
 			// need to get the block and update
 			data, err := s.fs.GetChunk(id)
 			// TODO: Need better error handling for when there is a block but it can't retreive it

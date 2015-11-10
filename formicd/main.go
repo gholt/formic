@@ -8,11 +8,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
-	"github.com/creiht/formic/flother"
 	pb "github.com/creiht/formic/proto"
 
 	"net"
-	"time"
 )
 
 var (
@@ -30,15 +28,6 @@ func FatalIf(err error, msg string) {
 	}
 }
 
-func newApiServer() *apiServer {
-	s := new(apiServer)
-	s.ds = NewInMemDS()
-	s.fs = NewOortFS(*oortHost)
-	// TODO: Get epoch and node id from some config
-	s.fl = flother.NewFlother(time.Time{}, 1)
-	return s
-}
-
 func main() {
 	flag.Parse()
 
@@ -53,7 +42,7 @@ func main() {
 	}
 
 	s := grpc.NewServer(opts...)
-	pb.RegisterApiServer(s, newApiServer())
+	pb.RegisterApiServer(s, NewApiServer(NewInMemDS(), NewOortFS(*oortHost)))
 	grpclog.Printf("Starting up on %d...\n", *port)
 	s.Serve(l)
 }
