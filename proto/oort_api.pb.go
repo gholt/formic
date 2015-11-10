@@ -12,6 +12,7 @@ It has these top-level messages:
 	Node
 	LookupRequest
 	Attr
+	SetAttrRequest
 	FileChunk
 	WriteResponse
 	DirEnt
@@ -75,11 +76,31 @@ type Attr struct {
 	Mode   uint32 `protobuf:"varint,6,opt,name=mode" json:"mode,omitempty"`
 	Valid  int32  `protobuf:"varint,7,opt,name=valid" json:"valid,omitempty"`
 	Size   uint64 `protobuf:"varint,8,opt,name=size" json:"size,omitempty"`
+	Uid    uint32 `protobuf:"varint,9,opt,name=uid" json:"uid,omitempty"`
+	Gid    uint32 `protobuf:"varint,10,opt,name=gid" json:"gid,omitempty"`
 }
 
 func (m *Attr) Reset()         { *m = Attr{} }
 func (m *Attr) String() string { return proto1.CompactTextString(m) }
 func (*Attr) ProtoMessage()    {}
+
+type SetAttrRequest struct {
+	SetMode  bool   `protobuf:"varint,1,opt,name=setMode" json:"setMode,omitempty"`
+	SetMtime bool   `protobuf:"varint,2,opt,name=setMtime" json:"setMtime,omitempty"`
+	SetSize  bool   `protobuf:"varint,3,opt,name=setSize" json:"setSize,omitempty"`
+	SetUid   bool   `protobuf:"varint,4,opt,name=setUid" json:"setUid,omitempty"`
+	SetGid   bool   `protobuf:"varint,5,opt,name=setGid" json:"setGid,omitempty"`
+	Inode    uint64 `protobuf:"varint,6,opt,name=inode" json:"inode,omitempty"`
+	Mtime    int64  `protobuf:"varint,7,opt,name=mtime" json:"mtime,omitempty"`
+	Mode     uint32 `protobuf:"varint,8,opt,name=mode" json:"mode,omitempty"`
+	Size     uint64 `protobuf:"varint,9,opt,name=size" json:"size,omitempty"`
+	Uid      uint32 `protobuf:"varint,10,opt,name=uid" json:"uid,omitempty"`
+	Gid      uint32 `protobuf:"varint,11,opt,name=gid" json:"gid,omitempty"`
+}
+
+func (m *SetAttrRequest) Reset()         { *m = SetAttrRequest{} }
+func (m *SetAttrRequest) String() string { return proto1.CompactTextString(m) }
+func (*SetAttrRequest) ProtoMessage()    {}
 
 // WriteRequest
 type FileChunk struct {
@@ -244,6 +265,7 @@ func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
 	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
 	proto1.RegisterType((*Attr)(nil), "proto.Attr")
+	proto1.RegisterType((*SetAttrRequest)(nil), "proto.SetAttrRequest")
 	proto1.RegisterType((*FileChunk)(nil), "proto.FileChunk")
 	proto1.RegisterType((*WriteResponse)(nil), "proto.WriteResponse")
 	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
@@ -267,7 +289,7 @@ var _ grpc.ClientConn
 // Client API for Api service
 
 type ApiClient interface {
-	SetAttr(ctx context.Context, in *Attr, opts ...grpc.CallOption) (*Attr, error)
+	SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error)
 	GetAttr(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Attr, error)
 	Read(ctx context.Context, in *Node, opts ...grpc.CallOption) (*FileChunk, error)
 	Write(ctx context.Context, in *FileChunk, opts ...grpc.CallOption) (*WriteResponse, error)
@@ -292,7 +314,7 @@ func NewApiClient(cc *grpc.ClientConn) ApiClient {
 	return &apiClient{cc}
 }
 
-func (c *apiClient) SetAttr(ctx context.Context, in *Attr, opts ...grpc.CallOption) (*Attr, error) {
+func (c *apiClient) SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error) {
 	out := new(Attr)
 	err := grpc.Invoke(ctx, "/proto.Api/SetAttr", in, out, c.cc, opts...)
 	if err != nil {
@@ -430,7 +452,7 @@ func (c *apiClient) Removexattr(ctx context.Context, in *RemovexattrRequest, opt
 // Server API for Api service
 
 type ApiServer interface {
-	SetAttr(context.Context, *Attr) (*Attr, error)
+	SetAttr(context.Context, *SetAttrRequest) (*Attr, error)
 	GetAttr(context.Context, *Node) (*Attr, error)
 	Read(context.Context, *Node) (*FileChunk, error)
 	Write(context.Context, *FileChunk) (*WriteResponse, error)
@@ -452,7 +474,7 @@ func RegisterApiServer(s *grpc.Server, srv ApiServer) {
 }
 
 func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(Attr)
+	in := new(SetAttrRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}

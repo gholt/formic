@@ -40,7 +40,7 @@ func (s *apiServer) GetAttr(ctx context.Context, r *pb.Node) (*pb.Attr, error) {
 	return s.fs.GetAttr(r.Inode)
 }
 
-func (s *apiServer) SetAttr(ctx context.Context, r *pb.Attr) (*pb.Attr, error) {
+func (s *apiServer) SetAttr(ctx context.Context, r *pb.SetAttrRequest) (*pb.Attr, error) {
 	return s.fs.SetAttr(r.Inode, r)
 }
 

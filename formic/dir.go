@@ -9,7 +9,7 @@ import (
 
 type DirService interface {
 	GetAttr(inode uint64) (*pb.Attr, error)
-	SetAttr(inode uint64, attr *pb.Attr) (*pb.Attr, error)
+	SetAttr(inode uint64, attr *pb.SetAttrRequest) (*pb.Attr, error)
 	Create(parent, inode uint64, name string, attr *pb.Attr, isdir bool) (*pb.DirEnt, error)
 	Update(inode, size uint64, mtime int64)
 	Lookup(parent uint64, name string) (*pb.DirEnt, error)
@@ -56,13 +56,25 @@ func (fs *InMemFS) GetAttr(inode uint64) (*pb.Attr, error) {
 	return &pb.Attr{}, nil
 }
 
-func (fs *InMemFS) SetAttr(inode uint64, attr *pb.Attr) (*pb.Attr, error) {
+func (fs *InMemFS) SetAttr(inode uint64, attr *pb.SetAttrRequest) (*pb.Attr, error) {
 	fs.Lock()
 	defer fs.Unlock()
 	if entry, ok := fs.nodes[inode]; ok {
-		entry.attr.Mode = attr.Mode
-		entry.attr.Size = attr.Size
-		entry.attr.Mtime = attr.Mtime
+		if attr.SetMode {
+			entry.attr.Mode = attr.Mode
+		}
+		if attr.SetSize {
+			entry.attr.Size = attr.Size
+		}
+		if attr.SetMtime {
+			entry.attr.Mtime = attr.Mtime
+		}
+		if attr.SetUid {
+			entry.attr.Uid = attr.Uid
+		}
+		if attr.SetGid {
+			entry.attr.Gid = attr.Gid
+		}
 		return entry.attr, nil
 	}
 	return &pb.Attr{}, nil

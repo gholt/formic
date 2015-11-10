@@ -4,7 +4,7 @@ package proto;
 
 // Combinded ClientApi
 service Api {
-    rpc SetAttr(Attr) returns (Attr) {}
+    rpc SetAttr(SetAttrRequest) returns (Attr) {}
     rpc GetAttr(Node) returns (Attr)     {}
     rpc Read(Node) returns (FileChunk) {}
     rpc Write(FileChunk) returns (WriteResponse) {}
@@ -45,6 +45,22 @@ message Attr {
     uint32 mode   = 6;
     int32  valid  = 7;
     uint64 size   = 8;
+    uint32 uid    = 9;
+    uint32 gid    = 10;
+}
+
+message SetAttrRequest {
+    bool   setMode  = 1;
+    bool   setMtime = 2;
+    bool   setSize  = 3;
+    bool   setUid   = 4;
+    bool   setGid   = 5;
+    uint64 inode     = 6;
+    int64  mtime     = 7;
+    uint32 mode      = 8;
+    uint64 size      = 9;
+    uint32 uid       = 10;
+    uint32 gid       = 11;
 }
 
 // WriteRequest

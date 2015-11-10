@@ -129,6 +129,8 @@ func recvAttr(src *pb.Attr, dest *fuse.Attr) {
 	dest.Atime = time.Unix(src.Atime, 0)
 	dest.Ctime = time.Unix(src.Ctime, 0)
 	dest.Crtime = time.Unix(src.Crtime, 0)
+	dest.Uid = src.Uid
+	dest.Gid = src.Gid
 }
 
 func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
@@ -302,13 +304,22 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	log.Println("Inside handleSetattr")
 	log.Println(r)
 	resp := &fuse.SetattrResponse{}
-
-	// Todo: Need to read attrs in to update
+	resp.Attr.Inode = uint64(r.Node)
+	a := &pb.SetAttrRequest{
+		Inode: uint64(r.Node),
+		Mode:  uint32(r.Mode),
+		Size:  r.Size,
+		Mtime: r.Mtime.Unix(),
+		Uid:   r.Uid,
+		Gid:   r.Gid,
+	}
 	if r.Valid.Size() {
 		resp.Attr.Size = r.Size
+		a.SetSize = true
 	}
 	if r.Valid.Mode() {
 		resp.Attr.Mode = r.Mode
+		a.SetMode = true
 	}
 	if r.Valid.Atime() {
 		resp.Attr.Atime = r.Atime
@@ -318,18 +329,22 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	}
 	if r.Valid.Mtime() {
 		resp.Attr.Mtime = r.Mtime
+		a.SetMtime = true
 	}
-
-	a := &pb.Attr{
-		Mode:  uint32(r.Mode),
-		Size:  r.Size,
-		Mtime: r.Mtime.Unix(),
+	if r.Valid.Uid() {
+		resp.Attr.Uid = r.Uid
+		a.SetUid = true
+	}
+	if r.Valid.Gid() {
+		resp.Attr.Gid = r.Gid
+		a.SetGid = true
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := f.rpc.api.SetAttr(rctx, a)
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
+	log.Println(resp)
 	r.Respond(resp)
 }
 
