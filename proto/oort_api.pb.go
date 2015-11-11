@@ -115,7 +115,7 @@ func (m *FileChunk) Reset()         { *m = FileChunk{} }
 func (m *FileChunk) String() string { return proto1.CompactTextString(m) }
 func (*FileChunk) ProtoMessage()    {}
 
-// WriteRepsonse place holder. Maybe use an enum so
+// WriteResponse place holder. Maybe use an enum so
 // we can map to fuse errors ?
 type WriteResponse struct {
 	Status int32 `protobuf:"varint,1,opt,name=status" json:"status,omitempty"`

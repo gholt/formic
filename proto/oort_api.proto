@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package proto;
 
-// Combinded ClientApi
+// Combined ClientApi
 service Api {
     rpc SetAttr(SetAttrRequest) returns (Attr) {}
     rpc GetAttr(Node) returns (Attr)     {}
@@ -71,7 +71,7 @@ message FileChunk {
     bytes  payload = 3;
 }
 
-// WriteRepsonse place holder. Maybe use an enum so
+// WriteResponse place holder. Maybe use an enum so
 // we can map to fuse errors ?
 message WriteResponse {
     int32 status = 1;
