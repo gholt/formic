@@ -96,18 +96,15 @@ func (f *fs) handle(r fuse.Request) {
 	case *fuse.RenameRequest:
 		f.handleRename(r)
 
+	case *fuse.StatfsRequest:
+		f.handleStatfs(r)
+
 		/*
 			case *fuse.MknodRequest:
 				f.handleMknod(r)
 
 			case *fuse.InitRequest:
 				f.handleInit(r)
-
-			case *fuse.StatfsRequest:
-				f.handleStatfs(r)
-
-			case *fuse.SetattrRequest:
-				f.handleSetattr(r)
 
 			case *fuse.LinkRequest:
 				f.handleLink(r)
@@ -405,7 +402,23 @@ func (f *fs) handleInit(r *fuse.InitRequest) {
 
 func (f *fs) handleStatfs(r *fuse.StatfsRequest) {
 	log.Println("Inside handleStatfs")
-	r.RespondError(fuse.ENOSYS)
+	log.Println(r)
+	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	resp, err := f.rpc.api.Statfs(rctx, &pb.StatfsRequest{})
+	if err != nil {
+		log.Fatalf("Failed to Statfs : %v", err)
+	}
+	fuse_resp := &fuse.StatfsResponse{
+		Blocks:  resp.Blocks,
+		Bfree:   resp.Bfree,
+		Bavail:  resp.Bavail,
+		Files:   resp.Files,
+		Ffree:   resp.Ffree,
+		Bsize:   resp.Bsize,
+		Namelen: resp.Namelen,
+		Frsize:  resp.Frsize,
+	}
+	r.Respond(fuse_resp)
 }
 
 func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {

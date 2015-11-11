@@ -20,6 +20,7 @@ service Api {
     rpc Listxattr(ListxattrRequest) returns (ListxattrResponse) {}
     rpc Removexattr(RemovexattrRequest) returns (RemovexattrResponse) {}
     rpc Rename(RenameRequest) returns (RenameResponse) {}
+    rpc Statfs(StatfsRequest) returns (StatfsResponse) {}
 }
 
 // Node is the file inode
@@ -149,3 +150,16 @@ message RenameRequest {
     string newName = 4;
 }
 message RenameResponse {}
+
+// Statfs
+message StatfsRequest {}
+message StatfsResponse {
+    uint64 blocks  = 1;
+    uint64 bfree   = 2;
+    uint64 bavail  = 3;
+    uint64 files   = 4;
+    uint64 ffree   = 5;
+    uint32 bsize   = 6;
+    uint32 namelen = 7;
+    uint32 frsize  = 8;
+}

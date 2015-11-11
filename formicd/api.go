@@ -191,3 +191,17 @@ func (s *apiServer) Removexattr(ctx context.Context, r *pb.RemovexattrRequest) (
 func (s *apiServer) Rename(ctx context.Context, r *pb.RenameRequest) (*pb.RenameResponse, error) {
 	return s.ds.Rename(r)
 }
+
+func (s *apiServer) Statfs(ctx context.Context, r *pb.StatfsRequest) (*pb.StatfsResponse, error) {
+	resp := &pb.StatfsResponse{
+		Blocks:  281474976710656, // 1 exabyte (asuming 4K block size)
+		Bfree:   281474976710656,
+		Bavail:  281474976710656,
+		Files:   1000000000000, // 1 trillion inodes
+		Ffree:   1000000000000,
+		Bsize:   4096, // it looked like ext4 used 4KB blocks
+		Namelen: 256,
+		Frsize:  4096, // this should probably match Bsize so we don't allow fragmented blocks
+	}
+	return resp, nil
+}
