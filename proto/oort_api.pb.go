@@ -29,6 +29,8 @@ It has these top-level messages:
 	RemovexattrResponse
 	RenameRequest
 	RenameResponse
+	StatfsRequest
+	StatfsResponse
 */
 package proto
 
@@ -282,6 +284,29 @@ func (m *RenameResponse) Reset()         { *m = RenameResponse{} }
 func (m *RenameResponse) String() string { return proto1.CompactTextString(m) }
 func (*RenameResponse) ProtoMessage()    {}
 
+// Statfs
+type StatfsRequest struct {
+}
+
+func (m *StatfsRequest) Reset()         { *m = StatfsRequest{} }
+func (m *StatfsRequest) String() string { return proto1.CompactTextString(m) }
+func (*StatfsRequest) ProtoMessage()    {}
+
+type StatfsResponse struct {
+	Blocks  uint64 `protobuf:"varint,1,opt,name=blocks" json:"blocks,omitempty"`
+	Bfree   uint64 `protobuf:"varint,2,opt,name=bfree" json:"bfree,omitempty"`
+	Bavail  uint64 `protobuf:"varint,3,opt,name=bavail" json:"bavail,omitempty"`
+	Files   uint64 `protobuf:"varint,4,opt,name=files" json:"files,omitempty"`
+	Ffree   uint64 `protobuf:"varint,5,opt,name=ffree" json:"ffree,omitempty"`
+	Bsize   uint32 `protobuf:"varint,6,opt,name=bsize" json:"bsize,omitempty"`
+	Namelen uint32 `protobuf:"varint,7,opt,name=namelen" json:"namelen,omitempty"`
+	Frsize  uint32 `protobuf:"varint,8,opt,name=frsize" json:"frsize,omitempty"`
+}
+
+func (m *StatfsResponse) Reset()         { *m = StatfsResponse{} }
+func (m *StatfsResponse) String() string { return proto1.CompactTextString(m) }
+func (*StatfsResponse) ProtoMessage()    {}
+
 func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
 	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
@@ -303,6 +328,8 @@ func init() {
 	proto1.RegisterType((*RemovexattrResponse)(nil), "proto.RemovexattrResponse")
 	proto1.RegisterType((*RenameRequest)(nil), "proto.RenameRequest")
 	proto1.RegisterType((*RenameResponse)(nil), "proto.RenameResponse")
+	proto1.RegisterType((*StatfsRequest)(nil), "proto.StatfsRequest")
+	proto1.RegisterType((*StatfsResponse)(nil), "proto.StatfsResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -328,6 +355,7 @@ type ApiClient interface {
 	Listxattr(ctx context.Context, in *ListxattrRequest, opts ...grpc.CallOption) (*ListxattrResponse, error)
 	Removexattr(ctx context.Context, in *RemovexattrRequest, opts ...grpc.CallOption) (*RemovexattrResponse, error)
 	Rename(ctx context.Context, in *RenameRequest, opts ...grpc.CallOption) (*RenameResponse, error)
+	Statfs(ctx context.Context, in *StatfsRequest, opts ...grpc.CallOption) (*StatfsResponse, error)
 }
 
 type apiClient struct {
@@ -482,6 +510,15 @@ func (c *apiClient) Rename(ctx context.Context, in *RenameRequest, opts ...grpc.
 	return out, nil
 }
 
+func (c *apiClient) Statfs(ctx context.Context, in *StatfsRequest, opts ...grpc.CallOption) (*StatfsResponse, error) {
+	out := new(StatfsResponse)
+	err := grpc.Invoke(ctx, "/proto.Api/Statfs", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Api service
 
 type ApiServer interface {
@@ -501,6 +538,7 @@ type ApiServer interface {
 	Listxattr(context.Context, *ListxattrRequest) (*ListxattrResponse, error)
 	Removexattr(context.Context, *RemovexattrRequest) (*RemovexattrResponse, error)
 	Rename(context.Context, *RenameRequest) (*RenameResponse, error)
+	Statfs(context.Context, *StatfsRequest) (*StatfsResponse, error)
 }
 
 func RegisterApiServer(s *grpc.Server, srv ApiServer) {
@@ -699,6 +737,18 @@ func _Api_Rename_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return out, nil
 }
 
+func _Api_Statfs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
+	in := new(StatfsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(ApiServer).Statfs(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 var _Api_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Api",
 	HandlerType: (*ApiServer)(nil),
@@ -766,6 +816,10 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Rename",
 			Handler:    _Api_Rename_Handler,
+		},
+		{
+			MethodName: "Statfs",
+			Handler:    _Api_Statfs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},
