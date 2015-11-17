@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,6 +33,36 @@ func FatalIf(err error, msg string) {
 
 func main() {
 	flag.Parse()
+
+	envtls := os.Getenv("FORMICD_TLS")
+	if envtls == "true" {
+		*tls = true
+	}
+
+	envoorthost := os.Getenv("FORMICD_OORT_HOST")
+	if envoorthost != "" {
+		*oortHost = envoorthost
+	}
+
+	envport := os.Getenv("FORMICD_PORT")
+	if envport != "" {
+		p, err := strconv.Atoi(envport)
+		if err != nil {
+			log.Println("Did not send valid port from env:", err)
+		} else {
+			*port = p
+		}
+	}
+
+	envcert := os.Getenv("FORMICD_CERT_FILE")
+	if envcert != "" {
+		*certFile = envcert
+	}
+
+	envkey := os.Getenv("FORMICD_KEY_FILE")
+	if envkey != "" {
+		*keyFile = envkey
+	}
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	FatalIf(err, "Failed to bind to port")
