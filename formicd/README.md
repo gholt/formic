@@ -18,11 +18,13 @@ go build . && ./formic
 
 ## formicd command line options(with defaults):
 
+Option | Description
+------ | -----------
 -cert_file string | The TLS cert file (default "/etc/oort/server.crt")      
 -key_file string | The TLS key file (default "/etc/oort/server.key")
 -oorthost string | host:port to use when connecting to oort (default "127.0.0.1:6379")
--port int           The server port (default 8443)
--tls                Connection uses TLS if true, else plain TCP (default true)
+-port int |          The server port (default 8443)
+-tls      |         Connection uses TLS if true, else plain TCP (default true)
 
 
 ## To run as a deamon with systemd:
