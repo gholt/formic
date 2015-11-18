@@ -6,7 +6,7 @@ package proto;
 service Api {
     rpc SetAttr(SetAttrRequest) returns (Attr) {}
     rpc GetAttr(Node) returns (Attr)     {}
-    rpc Read(Node) returns (FileChunk) {}
+    rpc Read(ReadRequest) returns (FileChunk) {}
     rpc Write(FileChunk) returns (WriteResponse) {}
     rpc MkDir(DirEnt) returns (DirEnt) {}
     rpc Create(DirEnt) returns (DirEnt) {}
@@ -63,6 +63,13 @@ message SetAttrRequest {
     uint64 size      = 9;
     uint32 uid       = 10;
     uint32 gid       = 11;
+}
+
+// ReqadRequest
+message ReadRequest {
+    uint64 inode   = 1;
+    int64  offset  = 2;
+    int64  size    = 3;
 }
 
 // WriteRequest

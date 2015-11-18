@@ -253,7 +253,11 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 	} else {
 		// handle file read
 		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		data, err := f.rpc.api.Read(rctx, &pb.Node{Inode: uint64(r.Node)})
+		data, err := f.rpc.api.Read(rctx, &pb.ReadRequest{
+			Inode:  uint64(r.Node),
+			Offset: int64(r.Offset),
+			Size:   int64(r.Size),
+		})
 		if err != nil {
 			log.Fatal("Read on file failed: ", err)
 		}

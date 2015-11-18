@@ -83,17 +83,29 @@ func (s *apiServer) MkDir(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error)
 	return s.ds.Create(r.Parent, inode, r.Name, attr, true)
 }
 
-func (s *apiServer) Read(ctx context.Context, r *pb.Node) (*pb.FileChunk, error) {
-	var err error
-	// TODO: Add support for reading blocks
-	id := s.GetID(1, 1, r.Inode, uint64(0))
-	data, err := s.fs.GetChunk(id)
-	if err != nil {
-		if err == redis.ErrNil {
-			//file is empty or doesn't exist yet.
-			return &pb.FileChunk{}, nil
+func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.FileChunk, error) {
+	block := uint64(r.Offset / s.blocksize)
+	data := make([]byte, r.Size)
+	firstOffset := int64(0)
+	if r.Offset%s.blocksize != 0 {
+		// Handle non-aligned offset
+		firstOffset = r.Offset - int64(block)*s.blocksize
+	}
+	cur := int64(0)
+	for cur < r.Size {
+		id := s.GetID(1, 1, r.Inode, block)
+		chunk, err := s.fs.GetChunk(id)
+		if err != nil {
+			if err == redis.ErrNil {
+				// TODO: Handle failures to get block better
+				return &pb.FileChunk{}, nil
+			}
+			return &pb.FileChunk{}, err
 		}
-		return &pb.FileChunk{}, err
+		copy(data[cur:], chunk[firstOffset:])
+		firstOffset = 0
+		block += 1
+		cur += int64(len(chunk))
 	}
 	f := &pb.FileChunk{Inode: r.Inode, Payload: data}
 	return f, nil
@@ -141,6 +153,7 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 		}
 		s.ds.Update(r.Inode, uint64(len(r.Payload)), time.Now().Unix())
 		cur += sendSize
+		block += 1
 	}
 	return &pb.WriteResponse{Status: 0}, nil
 }

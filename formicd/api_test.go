@@ -76,16 +76,24 @@ func (ds *TestDS) Rename(r *pb.RenameRequest) (*pb.RenameResponse, error) {
 // Minimal FileService for testing
 type TestFS struct {
 	writes [][]byte
+	reads  [][]byte
 }
 
 func NewTestFS() *TestFS {
 	return &TestFS{
 		writes: make([][]byte, 0),
+		reads:  make([][]byte, 0),
 	}
 }
 
 func (fs *TestFS) GetChunk(id []byte) ([]byte, error) {
-	return []byte(""), nil
+	if len(fs.reads) > 0 {
+		chunk := fs.reads[0]
+		fs.reads = fs.reads[1:]
+		return chunk, nil
+	} else {
+		return []byte(""), nil
+	}
 }
 
 func (fs *TestFS) WriteChunk(id, data []byte) error {
@@ -95,6 +103,10 @@ func (fs *TestFS) WriteChunk(id, data []byte) error {
 
 func (fs *TestFS) clearwrites() {
 	fs.writes = make([][]byte, 0)
+}
+
+func (fs *TestFS) addread(d []byte) {
+	fs.reads = append(fs.reads, d)
 }
 
 func TestCreate(t *testing.T) {
@@ -187,5 +199,55 @@ func TestWrite_Offset(t *testing.T) {
 	if !bytes.Equal(chunk.Payload, fs.writes[0][5:]) {
 		fmt.Println(fs.writes)
 		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload, fs.writes[0][5:])
+	}
+}
+
+func TestRead_Basic(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 10
+	write := []byte("0123456789")
+	fs.addread(write)
+	data, err := api.Read(context.Background(), &pb.ReadRequest{Inode: 0, Offset: 0, Size: 10})
+	if err != nil {
+		t.Error("Read Failed: ", err)
+	}
+	if !bytes.Equal(data.Payload, write) {
+		t.Errorf("Expected read: '%s' received: '%s'", write, data)
+	}
+}
+
+func TestRead_Offset(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 10
+	write := []byte("0123456789")
+	fs.addread(write)
+	data, err := api.Read(context.Background(), &pb.ReadRequest{Inode: 0, Offset: 5, Size: 5})
+	if err != nil {
+		t.Error("Read Failed: ", err)
+	}
+	if !bytes.Equal(data.Payload, write[5:]) {
+		t.Errorf("Expected read: '%s' received: '%s'", write[5:], data)
+	}
+}
+
+func TestRead_Chunk(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 10
+	write1 := []byte("0123456789")
+	write2 := []byte("9876543210")
+	fs.addread(write1)
+	fs.addread(write2)
+	data, err := api.Read(context.Background(), &pb.ReadRequest{Inode: 0, Offset: 0, Size: 20})
+	if err != nil {
+		t.Error("Read Failed: ", err)
+	}
+	if !bytes.Equal(data.Payload[:10], write1) {
+		t.Errorf("Expected read: '%s' received: '%s'", write1, data.Payload[:10])
+	}
+	if !bytes.Equal(data.Payload[10:], write2) {
+		t.Errorf("Expected read: '%s' received: '%s'", write2, data.Payload[10:])
 	}
 }
