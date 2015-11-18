@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"testing"
 
 	"golang.org/x/net/context"
@@ -73,10 +75,13 @@ func (ds *TestDS) Rename(r *pb.RenameRequest) (*pb.RenameResponse, error) {
 
 // Minimal FileService for testing
 type TestFS struct {
+	writes [][]byte
 }
 
 func NewTestFS() *TestFS {
-	return &TestFS{}
+	return &TestFS{
+		writes: make([][]byte, 0),
+	}
 }
 
 func (fs *TestFS) GetChunk(id []byte) ([]byte, error) {
@@ -84,7 +89,12 @@ func (fs *TestFS) GetChunk(id []byte) ([]byte, error) {
 }
 
 func (fs *TestFS) WriteChunk(id, data []byte) error {
+	fs.writes = append(fs.writes, data)
 	return nil
+}
+
+func (fs *TestFS) clearwrites() {
+	fs.writes = make([][]byte, 0)
 }
 
 func TestCreate(t *testing.T) {
@@ -94,4 +104,88 @@ func TestCreate(t *testing.T) {
 		t.Error("Create Failed: ", err)
 	}
 
+}
+
+func TestWrite_Basic(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 10
+	chunk := pb.FileChunk{
+		Offset:  0,
+		Payload: []byte("1234567890"),
+		Inode:   0,
+	}
+	r, err := api.Write(context.Background(), &chunk)
+	if err != nil {
+		t.Error("Write Failed: ", err)
+	}
+	if r.Status != 0 {
+		t.Error("Write status expected: 0, received: ", r.Status)
+	}
+	if !bytes.Equal(chunk.Payload, fs.writes[0]) {
+		fmt.Println(fs.writes)
+		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload, fs.writes[0])
+	}
+	chunk.Payload = []byte("1")
+	fs.clearwrites()
+	r, err = api.Write(context.Background(), &chunk)
+	if err != nil {
+		t.Error("Write Failed: ", err)
+	}
+	if r.Status != 0 {
+		t.Error("Write status expected: 0, received: ", r.Status)
+	}
+	if !bytes.Equal(chunk.Payload, fs.writes[0]) {
+		fmt.Println(fs.writes)
+		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload, fs.writes[0])
+	}
+
+}
+
+func TestWrite_Chunk(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 5
+	chunk := pb.FileChunk{
+		Offset:  0,
+		Payload: []byte("1234567890"),
+		Inode:   0,
+	}
+	r, err := api.Write(context.Background(), &chunk)
+	if err != nil {
+		t.Error("Write Failed: ", err)
+	}
+	if r.Status != 0 {
+		t.Error("Write status expected: 0, received: ", r.Status)
+	}
+	if !bytes.Equal(chunk.Payload[:5], fs.writes[0]) {
+		fmt.Println(fs.writes)
+		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload[:5], fs.writes[0])
+	}
+	if !bytes.Equal(chunk.Payload[5:], fs.writes[1]) {
+		fmt.Println(fs.writes)
+		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload[5:], fs.writes[1])
+	}
+}
+
+func TestWrite_Offset(t *testing.T) {
+	fs := NewTestFS()
+	api := NewApiServer(NewTestDS(), fs)
+	api.blocksize = 10
+	chunk := pb.FileChunk{
+		Offset:  5,
+		Payload: []byte("12345"),
+		Inode:   0,
+	}
+	r, err := api.Write(context.Background(), &chunk)
+	if err != nil {
+		t.Error("Write Failed: ", err)
+	}
+	if r.Status != 0 {
+		t.Error("Write status expected: 0, received: ", r.Status)
+	}
+	if !bytes.Equal(chunk.Payload, fs.writes[0][5:]) {
+		fmt.Println(fs.writes)
+		t.Errorf("Expected write: '%s' recieved: '%s'", chunk.Payload, fs.writes[0][5:])
+	}
 }

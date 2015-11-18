@@ -110,26 +110,31 @@ func min(a, b int64) int64 {
 func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteResponse, error) {
 	block := uint64(r.Offset / s.blocksize)
 	// TODO: Handle unaligned offsets
-	/*	firstOffset := int64(0)
-		if r.Offset%s.blocksize != 0 {
-			// Handle non-aligned offset
-			firstOffset = r.Offset - int64(block)*s.blocksize
-		} */
+	firstOffset := int64(0)
+	if r.Offset%s.blocksize != 0 {
+		// Handle non-aligned offset
+		firstOffset = r.Offset - int64(block)*s.blocksize
+	}
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
 		sendSize := min(s.blocksize, int64(len(r.Payload))-cur)
 		payload := r.Payload[cur : cur+sendSize]
 		id := s.GetID(1, 1, r.Inode, block)
-		if sendSize < s.blocksize {
+		if firstOffset > 0 || sendSize < s.blocksize {
 			// need to get the block and update
 			data, err := s.fs.GetChunk(id)
 			// TODO: Need better error handling for when there is a block but it can't retreive it
-			if err != nil && len(payload) < len(data) {
-				copy(data, payload)
+			if firstOffset > 0 && (err != nil || len(data) == 0) {
+				// Pad with 0's
+				data = make([]byte, firstOffset+int64(len(payload)))
+			}
+			if err == nil && len(payload) < len(data) {
+				copy(data[firstOffset:], payload)
 				payload = data
 			}
+			firstOffset = 0
 		}
-		err := s.fs.WriteChunk(id, r.Payload[cur:cur+sendSize])
+		err := s.fs.WriteChunk(id, payload)
 		// TODO: Need better error handling for failing with multiple chunks
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
