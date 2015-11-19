@@ -50,7 +50,7 @@ func (s *server) serve() error {
 
 var (
 	debug              = flag.Bool("debug", false, "enable debug log messages to stderr")
-	serverAddr         = flag.String("host", "127.0.0.1:8443", "The oort api server to connect to")
+	serverAddr         = flag.String("host", "127.0.0.1:9443", "The oort api server to connect to")
 	serverHostOverride = flag.String("host_override", "localhost", "")
 )
 

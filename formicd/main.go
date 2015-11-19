@@ -20,8 +20,8 @@ var (
 	tls      = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
 	certFile = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
 	keyFile  = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
-	port     = flag.Int("port", 8443, "The server port")
-	oortHost = flag.String("oorthost", "127.0.0.1:6379", "host:port to use when connecting to oort")
+	port     = flag.Int("port", 9443, "The server port")
+	oortHost = flag.String("oorthost", "127.0.0.1:4444", "host:port to use when connecting to oort")
 )
 
 // FatalIf is just a lazy log/panic on error func
