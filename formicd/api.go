@@ -65,6 +65,8 @@ func (s *apiServer) Create(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error
 		Ctime:  ts,
 		Crtime: ts,
 		Mode:   uint32(0777),
+		Uid:    r.Attr.Uid,
+		Gid:    r.Attr.Gid,
 	}
 	return s.ds.Create(r.Parent, inode, r.Name, attr, false)
 }
@@ -79,6 +81,8 @@ func (s *apiServer) MkDir(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error)
 		Ctime:  ts,
 		Crtime: ts,
 		Mode:   uint32(os.ModeDir | 0777),
+		Uid:    r.Attr.Uid,
+		Gid:    r.Attr.Gid,
 	}
 	return s.ds.Create(r.Parent, inode, r.Name, attr, true)
 }

@@ -137,7 +137,6 @@ func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	a, err := f.rpc.api.GetAttr(rctx, &pb.Node{Inode: uint64(r.Node)})
-	log.Println(a.Inode)
 	if err != nil {
 		log.Fatalf("GetAttr fail: %v", err)
 	}
@@ -179,7 +178,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 	resp := &fuse.MkdirResponse{}
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	m, err := f.rpc.api.MkDir(rctx, &pb.DirEnt{Name: r.Name, Parent: uint64(r.Node)})
+	m, err := f.rpc.api.MkDir(rctx, &pb.DirEnt{Name: r.Name, Parent: uint64(r.Node), Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid}})
 	if err != nil {
 		log.Fatalf("Mkdir failed(%s): %v", r.Name, err)
 	}
@@ -289,7 +288,7 @@ func (f *fs) handleCreate(r *fuse.CreateRequest) {
 
 	resp := &fuse.CreateResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	c, err := f.rpc.api.Create(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name})
+	c, err := f.rpc.api.Create(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name, Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid}})
 	if err != nil {
 		log.Fatalf("Failed to create file: %v", err)
 	}
