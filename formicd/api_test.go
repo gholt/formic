@@ -111,7 +111,7 @@ func (fs *TestFS) addread(d []byte) {
 
 func TestCreate(t *testing.T) {
 	api := NewApiServer(NewTestDS(), NewTestFS())
-	_, err := api.Create(context.Background(), &pb.DirEnt{Parent: 1, Name: "Test"})
+	_, err := api.Create(context.Background(), &pb.DirEnt{Parent: 1, Name: "Test", Attr: &pb.Attr{Gid: 1001, Uid: 1001}})
 	if err != nil {
 		t.Error("Create Failed: ", err)
 	}

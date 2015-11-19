@@ -268,6 +268,7 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 func (f *fs) handleWrite(r *fuse.WriteRequest) {
 	log.Println("Inside handleWrite")
 	log.Printf("Writing %d bytes at offset %d", len(r.Data), r.Offset)
+	log.Println(r)
 	// TODO: Implement write
 	// Currently this is stupid simple and doesn't handle all the possibilities
 	resp := &fuse.WriteResponse{}
@@ -285,7 +286,7 @@ func (f *fs) handleWrite(r *fuse.WriteRequest) {
 
 func (f *fs) handleCreate(r *fuse.CreateRequest) {
 	log.Println("Inside handleCreate")
-
+	log.Println(r)
 	resp := &fuse.CreateResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	c, err := f.rpc.api.Create(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name, Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid}})
