@@ -69,6 +69,8 @@ func NewInMemDS() *InMemDS {
 		Ctime:  ts,
 		Crtime: ts,
 		Mode:   uint32(os.ModeDir | 0777),
+		Uid:    1001, // TODO: need to config default user/group id
+		Gid:    1001,
 	}
 	ds.nodes[n.attr.Inode] = n
 	return ds
