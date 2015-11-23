@@ -13,7 +13,7 @@ type DirService interface {
 	GetAttr(inode uint64) (*pb.Attr, error)
 	SetAttr(inode uint64, attr *pb.SetAttrRequest) (*pb.Attr, error)
 	Create(parent, inode uint64, name string, attr *pb.Attr, isdir bool) (*pb.DirEnt, error)
-	Update(inode, size uint64, mtime int64)
+	Update(inode, block, size, blocksize uint64, mtime int64)
 	Lookup(parent uint64, name string) (*pb.DirEnt, error)
 	ReadDirAll(inode uint64) (*pb.DirEntries, error)
 	Remove(parent uint64, name string) (*pb.WriteResponse, error)
@@ -42,6 +42,9 @@ type Entry struct {
 	islink    bool
 	target    string
 	xattrs    map[string][]byte
+	blocks    uint64 // For files, the number of blocks this file represents
+	blocksize uint64 // The size of each block
+	lastblock uint64 // The size of the last block
 }
 
 // In memory implementation of DirService
@@ -93,6 +96,10 @@ func (ds *InMemDS) SetAttr(inode uint64, attr *pb.SetAttrRequest) (*pb.Attr, err
 			entry.attr.Mode = attr.Mode
 		}
 		if attr.SetSize {
+			if attr.Size == 0 {
+				entry.blocks = 0
+				entry.lastblock = 0
+			}
 			entry.attr.Size = attr.Size
 		}
 		if attr.SetMtime {
@@ -121,6 +128,7 @@ func (ds *InMemDS) Create(parent, inode uint64, name string, attr *pb.Attr, isdi
 		isdir:  isdir,
 		attr:   attr,
 		xattrs: make(map[string][]byte),
+		blocks: 0,
 	}
 	if isdir {
 		entry.entries = make(map[string]uint64)
@@ -173,9 +181,15 @@ func (ds *InMemDS) Remove(parent uint64, name string) (*pb.WriteResponse, error)
 	return &pb.WriteResponse{Status: 0}, nil
 }
 
-func (ds *InMemDS) Update(inode, size uint64, mtime int64) {
+func (ds *InMemDS) Update(inode, block, blocksize, size uint64, mtime int64) {
 	// NOTE: Not sure what this function really should look like yet
-	ds.nodes[inode].attr.Size = size
+	blocks := ds.nodes[inode].blocks
+	if block >= blocks {
+		ds.nodes[inode].blocks = block + 1
+		ds.nodes[inode].lastblock = size
+		ds.nodes[inode].blocksize = blocksize
+		ds.nodes[inode].attr.Size = blocksize*block + size
+	}
 	ds.nodes[inode].attr.Mtime = mtime
 }
 

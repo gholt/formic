@@ -155,7 +155,7 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
-		s.ds.Update(r.Inode, uint64(len(r.Payload)), time.Now().Unix())
+		s.ds.Update(r.Inode, block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
 		cur += sendSize
 		block += 1
 	}
