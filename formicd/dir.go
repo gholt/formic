@@ -189,7 +189,11 @@ func (ds *InMemDS) Update(inode, block, blocksize, size uint64, mtime int64) {
 		ds.nodes[inode].lastblock = size
 		ds.nodes[inode].blocksize = blocksize
 		ds.nodes[inode].attr.Size = blocksize*block + size
+	} else if block == (blocks - 1) {
+		ds.nodes[inode].lastblock = size
+		ds.nodes[inode].attr.Size = blocksize*block + size
 	}
+
 	ds.nodes[inode].attr.Mtime = mtime
 }
 

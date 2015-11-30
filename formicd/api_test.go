@@ -42,7 +42,7 @@ func (ds *TestDS) Remove(parent uint64, name string) (*pb.WriteResponse, error) 
 	return &pb.WriteResponse{Status: 1}, nil
 }
 
-func (ds *TestDS) Update(inode, size uint64, mtime int64) {
+func (ds *TestDS) Update(inode, block, blocksize, size uint64, mtime int64) {
 }
 
 func (ds *TestDS) Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.DirEnt, error) {
