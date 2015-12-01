@@ -98,7 +98,9 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.FileChunk,
 	cur := int64(0)
 	for cur < r.Size {
 		id := s.GetID(1, 1, r.Inode, block)
+		log.Printf("Reading Inode: %d, Block: %d ID: %d", r.Inode, block, id)
 		chunk, err := s.fs.GetChunk(id)
+		log.Printf("LEN: %d", len(chunk))
 		if err != nil {
 			if err == redis.ErrNil {
 				// TODO: Handle failures to get block better
@@ -106,10 +108,18 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.FileChunk,
 			}
 			return &pb.FileChunk{}, err
 		}
+		if len(chunk) == 0 {
+			log.Printf("Err: Read 0 Bytes")
+			break
+		}
 		copy(data[cur:], chunk[firstOffset:])
 		firstOffset = 0
 		block += 1
-		cur += int64(len(chunk))
+		cur += firstOffset + int64(len(chunk))
+		log.Printf("Read %d bytes", cur)
+		if int64(len(chunk)) < s.blocksize {
+			break
+		}
 	}
 	f := &pb.FileChunk{Inode: r.Inode, Payload: data}
 	return f, nil
@@ -139,18 +149,17 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 		id := s.GetID(1, 1, r.Inode, block)
 		if firstOffset > 0 || sendSize < s.blocksize {
 			// need to get the block and update
-			block := make([]byte, firstOffset+int64(len(payload)))
+			chunk := make([]byte, firstOffset+int64(len(payload)))
 			data, err := s.fs.GetChunk(id)
 			if firstOffset > 0 && (err != nil || len(data) == 0) {
 				// TODO: Need better error handling for when there is a block but it can't retreive it
 				log.Printf("ERR: couldn't get block id %d", id)
+			} else {
+				copy(chunk, data)
 			}
-			if err == nil && len(payload) < len(data) {
-				log.Printf("LEN: %d", len(data))
-				copy(block, data)
-				copy(block[firstOffset:], payload)
-				payload = block
-			}
+			log.Printf("LEN: %d", len(data))
+			copy(chunk[firstOffset:], payload)
+			payload = chunk
 			firstOffset = 0
 		}
 		log.Printf("Writing Inode: %d Block: %d ID: %d Len: %d", r.Inode, block, id, sendSize)
