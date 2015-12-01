@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -40,11 +41,10 @@ func (s *apiServer) GetID(custID, shareID, inode, block uint64) []byte {
 	binary.Write(h, binary.BigEndian, inode)
 	binary.Write(h, binary.BigEndian, block)
 	s1, s2 := h.Sum128()
-	id := make([]byte, 8)
-	b := bytes.NewBuffer(id)
+	b := bytes.NewBuffer([]byte(""))
 	binary.Write(b, binary.BigEndian, s1)
 	binary.Write(b, binary.BigEndian, s2)
-	return id
+	return b.Bytes()
 }
 
 func (s *apiServer) GetAttr(ctx context.Context, r *pb.Node) (*pb.Attr, error) {
@@ -130,6 +130,7 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 	if r.Offset%s.blocksize != 0 {
 		// Handle non-aligned offset
 		firstOffset = r.Offset - int64(block)*s.blocksize
+		log.Printf("Offset: %d, firstOffset: %d", r.Offset, firstOffset)
 	}
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
@@ -138,24 +139,27 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 		id := s.GetID(1, 1, r.Inode, block)
 		if firstOffset > 0 || sendSize < s.blocksize {
 			// need to get the block and update
+			block := make([]byte, firstOffset+int64(len(payload)))
 			data, err := s.fs.GetChunk(id)
-			// TODO: Need better error handling for when there is a block but it can't retreive it
 			if firstOffset > 0 && (err != nil || len(data) == 0) {
-				// Pad with 0's
-				data = make([]byte, firstOffset+int64(len(payload)))
+				// TODO: Need better error handling for when there is a block but it can't retreive it
+				log.Printf("ERR: couldn't get block id %d", id)
 			}
 			if err == nil && len(payload) < len(data) {
-				copy(data[firstOffset:], payload)
-				payload = data
+				log.Printf("LEN: %d", len(data))
+				copy(block, data)
+				copy(block[firstOffset:], payload)
+				payload = block
 			}
 			firstOffset = 0
 		}
+		log.Printf("Writing Inode: %d Block: %d ID: %d Len: %d", r.Inode, block, id, sendSize)
 		err := s.fs.WriteChunk(id, payload)
 		// TODO: Need better error handling for failing with multiple chunks
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
-		s.ds.Update(r.Inode, block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
+		s.ds.Update(r.Inode, block, uint64(s.blocksize), uint64(sendSize), time.Now().Unix())
 		cur += sendSize
 		block += 1
 	}
