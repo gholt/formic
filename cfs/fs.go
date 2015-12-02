@@ -210,7 +210,7 @@ func (f *fs) handleOpen(r *fuse.OpenRequest) {
 func (f *fs) handleRead(r *fuse.ReadRequest) {
 	log.Println("Inside handleRead")
 	log.Println(r)
-	resp := &fuse.ReadResponse{Data: make([]byte, 0, r.Size)}
+	resp := &fuse.ReadResponse{Data: make([]byte, r.Size)}
 	if r.Dir {
 		// handle directory listing
 		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -260,7 +260,7 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 		if err != nil {
 			log.Fatal("Read on file failed: ", err)
 		}
-		fuseutil.HandleRead(r, resp, data.Payload)
+		copy(resp.Data, data.Payload)
 		r.Respond(resp)
 	}
 }

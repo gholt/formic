@@ -88,12 +88,14 @@ func (s *apiServer) MkDir(ctx context.Context, r *pb.DirEnt) (*pb.DirEnt, error)
 }
 
 func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.FileChunk, error) {
+	log.Printf("READ: Inode: %d Offset: %d Size: %d", r.Inode, r.Offset, r.Size)
 	block := uint64(r.Offset / s.blocksize)
 	data := make([]byte, r.Size)
 	firstOffset := int64(0)
 	if r.Offset%s.blocksize != 0 {
 		// Handle non-aligned offset
 		firstOffset = r.Offset - int64(block)*s.blocksize
+		log.Printf("Offset: %d, firstOffset: %d", r.Offset, firstOffset)
 	}
 	cur := int64(0)
 	for cur < r.Size {
@@ -104,19 +106,21 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.FileChunk,
 		if err != nil {
 			if err == redis.ErrNil {
 				// TODO: Handle failures to get block better
+				log.Printf("Err: Failed to read block")
 				return &pb.FileChunk{}, nil
 			}
+			log.Print("Err: Failed to read block: ", err)
 			return &pb.FileChunk{}, err
 		}
 		if len(chunk) == 0 {
 			log.Printf("Err: Read 0 Bytes")
 			break
 		}
-		copy(data[cur:], chunk[firstOffset:])
+		count := copy(data[cur:], chunk[firstOffset:])
 		firstOffset = 0
 		block += 1
-		cur += firstOffset + int64(len(chunk))
-		log.Printf("Read %d bytes", cur)
+		cur += int64(len(chunk))
+		log.Printf("Read %d bytes", count)
 		if int64(len(chunk)) < s.blocksize {
 			break
 		}
