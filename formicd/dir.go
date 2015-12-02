@@ -71,7 +71,7 @@ func NewInMemDS() *InMemDS {
 		Mtime:  ts,
 		Ctime:  ts,
 		Crtime: ts,
-		Mode:   uint32(os.ModeDir | 0777),
+		Mode:   uint32(os.ModeDir | 0775),
 		Uid:    1001, // TODO: need to config default user/group id
 		Gid:    1001,
 	}
