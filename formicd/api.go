@@ -159,9 +159,13 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 				// TODO: Need better error handling for when there is a block but it can't retreive it
 				log.Printf("ERR: couldn't get block id %d", id)
 			} else {
-				copy(chunk, data)
+				if len(data) > len(chunk) {
+					chunk = data
+				} else {
+					copy(chunk, data)
+				}
 			}
-			log.Printf("LEN: %d", len(data))
+			log.Printf("DATA LEN: %d CHUNK LEN: %d", len(data), len(chunk))
 			copy(chunk[firstOffset:], payload)
 			payload = chunk
 			firstOffset = 0
@@ -172,7 +176,7 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
-		s.ds.Update(r.Inode, block, uint64(s.blocksize), uint64(sendSize), time.Now().Unix())
+		s.ds.Update(r.Inode, block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
 		cur += sendSize
 		block += 1
 	}

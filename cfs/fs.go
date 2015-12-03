@@ -118,7 +118,7 @@ func (f *fs) handle(r fuse.Request) {
 	}
 }
 
-func recvAttr(src *pb.Attr, dest *fuse.Attr) {
+func copyAttr(src *pb.Attr, dest *fuse.Attr) {
 	dest.Inode = src.Inode
 	dest.Mode = os.FileMode(src.Mode)
 	dest.Size = src.Size
@@ -140,7 +140,7 @@ func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 	if err != nil {
 		log.Fatalf("GetAttr fail: %v", err)
 	}
-	recvAttr(a, &resp.Attr)
+	copyAttr(a, &resp.Attr)
 
 	log.Println(resp)
 	r.Respond(resp)
@@ -165,7 +165,7 @@ func (f *fs) handleLookup(r *fuse.LookupRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(l.Attr.Inode)
-	recvAttr(l.Attr, &resp.Attr)
+	copyAttr(l.Attr, &resp.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -189,7 +189,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(m.Attr.Inode)
-	recvAttr(m.Attr, &resp.Attr)
+	copyAttr(m.Attr, &resp.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -294,9 +294,9 @@ func (f *fs) handleCreate(r *fuse.CreateRequest) {
 		log.Fatalf("Failed to create file: %v", err)
 	}
 	resp.Node = fuse.NodeID(c.Attr.Inode)
-	recvAttr(c.Attr, &resp.Attr)
+	copyAttr(c.Attr, &resp.Attr)
 	resp.EntryValid = 5 * time.Second
-	recvAttr(c.Attr, &resp.LookupResponse.Attr)
+	copyAttr(c.Attr, &resp.LookupResponse.Attr)
 	resp.LookupResponse.EntryValid = 5 * time.Second
 	r.Respond(resp)
 }
@@ -345,7 +345,7 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
-	recvAttr(attr, &resp.Attr)
+	copyAttr(attr, &resp.Attr)
 	log.Println(resp)
 	r.Respond(resp)
 }
@@ -435,7 +435,7 @@ func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 		log.Fatalf("Symlink failed: %v", err)
 	}
 	resp.Node = fuse.NodeID(symlink.Attr.Inode)
-	recvAttr(symlink.Attr, &resp.Attr)
+	copyAttr(symlink.Attr, &resp.Attr)
 	resp.EntryValid = 5 * time.Second
 	log.Println(resp)
 	r.Respond(resp)
