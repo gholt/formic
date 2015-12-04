@@ -149,6 +149,9 @@ func (s *apiServer) Write(ctx context.Context, r *pb.FileChunk) (*pb.WriteRespon
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
 		sendSize := min(s.blocksize, int64(len(r.Payload))-cur)
+		if sendSize+firstOffset > s.blocksize {
+			sendSize = s.blocksize - firstOffset
+		}
 		payload := r.Payload[cur : cur+sendSize]
 		id := s.GetID(1, 1, r.Inode, block)
 		if firstOffset > 0 || sendSize < s.blocksize {
