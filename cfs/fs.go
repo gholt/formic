@@ -219,7 +219,6 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 		if err != nil {
 			log.Fatalf("Read on dir failed: %v", err)
 		}
-		log.Println(d.DirEntries)
 		var data []byte
 		data = fuse.AppendDirent(data, fuse.Dirent{
 			Name:  ".",

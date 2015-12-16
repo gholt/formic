@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -152,6 +153,21 @@ func (ds *InMemDS) Lookup(parent uint64, name string) (*pb.DirEnt, error) {
 	return &pb.DirEnt{Name: entry.path, Attr: entry.attr}, nil
 }
 
+// Needed to be able to sort the dirents
+type ByDirent []*pb.DirEnt
+
+func (d ByDirent) Len() int {
+	return len(d)
+}
+
+func (d ByDirent) Swap(i, j int) {
+	d[i], d[j] = d[j], d[i]
+}
+
+func (d ByDirent) Less(i, j int) bool {
+	return d[i].Name < d[j].Name
+}
+
 func (ds *InMemDS) ReadDirAll(inode uint64) (*pb.DirEntries, error) {
 	ds.RLock()
 	defer ds.RUnlock()
@@ -164,6 +180,8 @@ func (ds *InMemDS) ReadDirAll(inode uint64) (*pb.DirEntries, error) {
 			e.FileEntries = append(e.FileEntries, &pb.DirEnt{Name: entry.path, Attr: entry.attr})
 		}
 	}
+	sort.Sort(ByDirent(e.DirEntries))
+	sort.Sort(ByDirent(e.FileEntries))
 	return e, nil
 }
 
