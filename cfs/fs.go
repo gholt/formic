@@ -215,7 +215,7 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 		// handle directory listing
 		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-		d, err := f.rpc.api.ReadDirAll(rctx, &pb.Node{Inode: uint64(r.Node)})
+		d, err := f.rpc.api.ReadDirAll(rctx, &pb.ReadDirAllRequest{Inode: uint64(r.Node)})
 		if err != nil {
 			log.Fatalf("Read on dir failed: %v", err)
 		}
@@ -288,7 +288,7 @@ func (f *fs) handleCreate(r *fuse.CreateRequest) {
 	log.Println(r)
 	resp := &fuse.CreateResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	c, err := f.rpc.api.Create(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name, Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
+	c, err := f.rpc.api.Create(rctx, &pb.CreateRequest{Parent: uint64(r.Node), Name: r.Name, Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
 	if err != nil {
 		log.Fatalf("Failed to create file: %v", err)
 	}
@@ -366,7 +366,7 @@ func (f *fs) handleRemove(r *fuse.RemoveRequest) {
 	log.Println("Inside handleRemove")
 	log.Println(r)
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := f.rpc.api.Remove(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name})
+	_, err := f.rpc.api.Remove(rctx, &pb.RemoveRequest{Parent: uint64(r.Node), Name: r.Name})
 	if err != nil {
 		log.Fatalf("Failed to delete file: %v", err)
 	}
@@ -434,7 +434,7 @@ func (f *fs) handleReadlink(r *fuse.ReadlinkRequest) {
 	log.Println("Inside handleReadlink")
 	log.Println(r)
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	resp, err := f.rpc.api.Readlink(rctx, &pb.Node{Inode: uint64(r.Node)})
+	resp, err := f.rpc.api.Readlink(rctx, &pb.ReadlinkRequest{Inode: uint64(r.Node)})
 	if err != nil {
 		log.Fatalf("Readlink failed: %v", err)
 	}
