@@ -4,17 +4,17 @@ package proto;
 
 // Combined ClientApi
 service Api {
-    rpc SetAttr(SetAttrRequest) returns (Attr) {}
-    rpc GetAttr(Node) returns (Attr)     {}
-    rpc Read(ReadRequest) returns (FileChunk) {}
-    rpc Write(FileChunk) returns (WriteResponse) {}
-    rpc MkDir(DirEnt) returns (DirEnt) {}
-    rpc Create(DirEnt) returns (DirEnt) {}
-    rpc Remove(DirEnt) returns (WriteResponse) {}
-    rpc Lookup(LookupRequest) returns (DirEnt) {}
-    rpc ReadDirAll(Node) returns (DirEntries) {}
-    rpc Symlink(SymlinkRequest) returns (DirEnt) {}
-    rpc Readlink(Node) returns (ReadlinkResponse) {}
+    rpc SetAttr(SetAttrRequest) returns (SetAttrResponse) {}
+    rpc GetAttr(GetAttrRequest) returns (GetAttrResponse) {}
+    rpc Read(ReadRequest) returns (ReadResponse) {}
+    rpc Write(WriteRequest) returns (WriteResponse) {}
+    rpc MkDir(MkDirRequest) returns (MkDirResponse) {}
+    rpc Create(CreateRequest) returns (CreateResponse) {}
+    rpc Remove(RemoveRequest) returns (RemoveResponse) {}
+    rpc Lookup(LookupRequest) returns (LookupResponse) {}
+    rpc ReadDirAll(ReadDirAllRequest) returns (ReadDirAllResponse) {}
+    rpc Symlink(SymlinkRequest) returns (SymlinkResponse) {}
+    rpc Readlink(ReadlinkRequest) returns (ReadlinkResponse) {}
     rpc Getxattr(GetxattrRequest) returns (GetxattrResponse) {}
     rpc Setxattr(SetxattrRequest) returns (SetxattrResponse) {}
     rpc Listxattr(ListxattrRequest) returns (ListxattrResponse) {}
@@ -28,16 +28,14 @@ message Node {
     uint64 inode = 1;
 }
 
-// Lookup
-message LookupRequest {
+// DirEnt is a directory entry
+message DirEnt {
     string name   = 1;
-    uint64 parent = 2; //where to lookup (inode)
+    uint64 parent = 2;
+    Attr   attr   = 3;
 }
 
-// Attr. fields are optional by default in proto3, so
-// clients don't have to send all fields when performing an
-// attr update for example. These might not all be needed
-// but i got tired of constantly forgetting fields.
+// Attr
 message Attr {
     uint64 inode  = 1;
     int64  atime  = 2;
@@ -51,18 +49,25 @@ message Attr {
     uint32 gid    = 10;
 }
 
+// SetAttrRequest
 message SetAttrRequest {
-    bool   setMode  = 1;
-    bool   setMtime = 2;
-    bool   setSize  = 3;
-    bool   setUid   = 4;
-    bool   setGid   = 5;
-    uint64 inode     = 6;
-    int64  mtime     = 7;
-    uint32 mode      = 8;
-    uint64 size      = 9;
-    uint32 uid       = 10;
-    uint32 gid       = 11;
+    Attr   attr  = 1;
+    uint32 valid = 2;   // Bitmask of which attrs are changed
+}
+
+// SetAttrResponse
+message SetAttrResponse {
+    Attr attr = 1;
+}
+
+// GetAttrRequest
+message GetAttrRequest {
+    uint64 inode = 1;
+}
+
+// GetAttrResponse
+message GetAttrResponse {
+    Attr attr = 1;
 }
 
 // ReqadRequest
@@ -72,8 +77,14 @@ message ReadRequest {
     int64  size    = 3;
 }
 
+// ReadResponse
+message ReadResponse {
+    uint64 inode   = 1;
+    bytes  payload = 2;
+}
+
 // WriteRequest
-message FileChunk {
+message WriteRequest {
     uint64 inode   = 1;
     int64  offset  = 2;
     bytes  payload = 3;
@@ -85,11 +96,80 @@ message WriteResponse {
     int32 status = 1;
 }
 
+// MkdirRequest
+message MkDirRequest {
+    uint64 parent = 1;
+    string name   = 2;
+    Attr   attr   = 3;
+}
 
-// DirEnt is a directory entry
-message DirEnt {
+// MkdirResponse
+message MkDirResponse {
     string name   = 1;
-    uint64 parent = 2;
+    Attr   attr   = 2;
+}
+
+// CreateRequest
+message CreateRequest {
+    uint64 parent = 1;
+    string name   = 2;
+    Attr   attr   = 3;
+}
+
+// CreateResponse
+message CreateResponse {
+    string name   = 1;
+    Attr   attr   = 2;
+}
+
+// RemoveRequest
+message RemoveRequest {
+    uint64 parent = 1;
+    string name   = 2;
+}
+
+// RemoveResponse
+message RemoveResponse {
+    int32 status = 1;
+}
+
+// LookupRequest
+message LookupRequest {
+    uint64 parent = 1; 
+    string name   = 2;
+}
+
+
+// LookupResponse is a directory entry
+message LookupResponse {
+    string name   = 1;
+    Attr   attr   = 2;
+}
+
+// ReadDirAllRequest
+message ReadDirAllRequest {
+    uint64 inode = 1;
+}
+
+// ReadDirAllResponse
+message ReadDirAllResponse {
+    repeated DirEnt DirEntries  = 1;
+    repeated DirEnt FileEntries = 2;
+}
+
+// SymlinkRequest
+message SymlinkRequest {
+    uint64 parent   = 1;
+    string name     = 2;
+    string target   = 3;
+    uint32 uid      = 4;
+    uint32 gid      = 5;
+}
+
+// SymlinkResponse
+message SymlinkResponse {
+    uint64 parent = 1;
+    string name   = 2;
     Attr   attr   = 3;
 }
 
@@ -99,14 +179,12 @@ message DirEntries {
     repeated DirEnt FileEntries = 2;
 }
 
-// Symlink
-message SymlinkRequest {
-    string name     = 1;
-    uint64 parent   = 2;
-    string target   = 3;
+// ReadlinkRequest
+message ReadlinkRequest {
+    uint64 inode = 1;
 }
 
-// Readlink
+// ReadlinkResponse
 message ReadlinkResponse {
     string target = 1;
 }

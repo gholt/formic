@@ -118,16 +118,16 @@ func (f *fs) handle(r fuse.Request) {
 	}
 }
 
-func copyAttr(src *pb.Attr, dest *fuse.Attr) {
-	dest.Inode = src.Inode
-	dest.Mode = os.FileMode(src.Mode)
-	dest.Size = src.Size
-	dest.Mtime = time.Unix(src.Mtime, 0)
-	dest.Atime = time.Unix(src.Atime, 0)
-	dest.Ctime = time.Unix(src.Ctime, 0)
-	dest.Crtime = time.Unix(src.Crtime, 0)
-	dest.Uid = src.Uid
-	dest.Gid = src.Gid
+func copyAttr(dst *fuse.Attr, src *pb.Attr) {
+	dst.Inode = src.Inode
+	dst.Mode = os.FileMode(src.Mode)
+	dst.Size = src.Size
+	dst.Mtime = time.Unix(src.Mtime, 0)
+	dst.Atime = time.Unix(src.Atime, 0)
+	dst.Ctime = time.Unix(src.Ctime, 0)
+	dst.Crtime = time.Unix(src.Crtime, 0)
+	dst.Uid = src.Uid
+	dst.Gid = src.Gid
 }
 
 func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
@@ -136,11 +136,11 @@ func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 	resp := &fuse.GetattrResponse{}
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	a, err := f.rpc.api.GetAttr(rctx, &pb.Node{Inode: uint64(r.Node)})
+	a, err := f.rpc.api.GetAttr(rctx, &pb.GetAttrRequest{Inode: uint64(r.Node)})
 	if err != nil {
 		log.Fatalf("GetAttr fail: %v", err)
 	}
-	copyAttr(a, &resp.Attr)
+	copyAttr(&resp.Attr, a.Attr)
 
 	log.Println(resp)
 	r.Respond(resp)
@@ -165,7 +165,7 @@ func (f *fs) handleLookup(r *fuse.LookupRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(l.Attr.Inode)
-	copyAttr(l.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, l.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -178,7 +178,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 	resp := &fuse.MkdirResponse{}
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	m, err := f.rpc.api.MkDir(rctx, &pb.DirEnt{Name: r.Name, Parent: uint64(r.Node), Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
+	m, err := f.rpc.api.MkDir(rctx, &pb.MkDirRequest{Name: r.Name, Parent: uint64(r.Node), Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
 	if err != nil {
 		log.Fatalf("Mkdir failed(%s): %v", r.Name, err)
 	}
@@ -189,7 +189,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(m.Attr.Inode)
-	copyAttr(m.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, m.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -272,7 +272,7 @@ func (f *fs) handleWrite(r *fuse.WriteRequest) {
 	// Currently this is stupid simple and doesn't handle all the possibilities
 	resp := &fuse.WriteResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	w, err := f.rpc.api.Write(rctx, &pb.FileChunk{Inode: uint64(r.Node), Offset: r.Offset, Payload: r.Data})
+	w, err := f.rpc.api.Write(rctx, &pb.WriteRequest{Inode: uint64(r.Node), Offset: r.Offset, Payload: r.Data})
 	if err != nil {
 		log.Fatalf("Write to file failed: %v", err)
 	}
@@ -293,9 +293,9 @@ func (f *fs) handleCreate(r *fuse.CreateRequest) {
 		log.Fatalf("Failed to create file: %v", err)
 	}
 	resp.Node = fuse.NodeID(c.Attr.Inode)
-	copyAttr(c.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, c.Attr)
 	resp.EntryValid = 5 * time.Second
-	copyAttr(c.Attr, &resp.LookupResponse.Attr)
+	copyAttr(&resp.LookupResponse.Attr, c.Attr)
 	resp.LookupResponse.EntryValid = 5 * time.Second
 	r.Respond(resp)
 }
@@ -305,21 +305,14 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	log.Println(r)
 	resp := &fuse.SetattrResponse{}
 	resp.Attr.Inode = uint64(r.Node)
-	a := &pb.SetAttrRequest{
+	a := &pb.Attr{
 		Inode: uint64(r.Node),
-		Mode:  uint32(r.Mode),
-		Size:  r.Size,
-		Mtime: r.Mtime.Unix(),
-		Uid:   r.Uid,
-		Gid:   r.Gid,
 	}
 	if r.Valid.Size() {
 		resp.Attr.Size = r.Size
-		a.SetSize = true
 	}
 	if r.Valid.Mode() {
 		resp.Attr.Mode = r.Mode
-		a.SetMode = true
 	}
 	if r.Valid.Atime() {
 		resp.Attr.Atime = r.Atime
@@ -329,22 +322,19 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	}
 	if r.Valid.Mtime() {
 		resp.Attr.Mtime = r.Mtime
-		a.SetMtime = true
 	}
 	if r.Valid.Uid() {
 		resp.Attr.Uid = r.Uid
-		a.SetUid = true
 	}
 	if r.Valid.Gid() {
 		resp.Attr.Gid = r.Gid
-		a.SetGid = true
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	attr, err := f.rpc.api.SetAttr(rctx, a)
+	setAttrResp, err := f.rpc.api.SetAttr(rctx, &pb.SetAttrRequest{Attr: a, Valid: uint32(r.Valid)})
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
-	copyAttr(attr, &resp.Attr)
+	copyAttr(&resp.Attr, setAttrResp.Attr)
 	log.Println(resp)
 	r.Respond(resp)
 }
@@ -429,12 +419,12 @@ func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 	log.Println(r)
 	resp := &fuse.SymlinkResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	symlink, err := f.rpc.api.Symlink(rctx, &pb.SymlinkRequest{Parent: uint64(r.Node), Name: r.NewName, Target: r.Target})
+	symlink, err := f.rpc.api.Symlink(rctx, &pb.SymlinkRequest{Parent: uint64(r.Node), Name: r.NewName, Target: r.Target, Uid: r.Uid, Gid: r.Gid})
 	if err != nil {
 		log.Fatalf("Symlink failed: %v", err)
 	}
 	resp.Node = fuse.NodeID(symlink.Attr.Inode)
-	copyAttr(symlink.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, symlink.Attr)
 	resp.EntryValid = 5 * time.Second
 	log.Println(resp)
 	r.Respond(resp)

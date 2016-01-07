@@ -10,15 +10,30 @@ It is generated from these files:
 
 It has these top-level messages:
 	Node
-	LookupRequest
+	DirEnt
 	Attr
 	SetAttrRequest
+	SetAttrResponse
+	GetAttrRequest
+	GetAttrResponse
 	ReadRequest
-	FileChunk
+	ReadResponse
+	WriteRequest
 	WriteResponse
-	DirEnt
-	DirEntries
+	MkDirRequest
+	MkDirResponse
+	CreateRequest
+	CreateResponse
+	RemoveRequest
+	RemoveResponse
+	LookupRequest
+	LookupResponse
+	ReadDirAllRequest
+	ReadDirAllResponse
 	SymlinkRequest
+	SymlinkResponse
+	DirEntries
+	ReadlinkRequest
 	ReadlinkResponse
 	GetxattrRequest
 	GetxattrResponse
@@ -59,21 +74,26 @@ func (m *Node) String() string            { return proto1.CompactTextString(m) }
 func (*Node) ProtoMessage()               {}
 func (*Node) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-// Lookup
-type LookupRequest struct {
+// DirEnt is a directory entry
+type DirEnt struct {
 	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+	Attr   *Attr  `protobuf:"bytes,3,opt,name=attr" json:"attr,omitempty"`
 }
 
-func (m *LookupRequest) Reset()                    { *m = LookupRequest{} }
-func (m *LookupRequest) String() string            { return proto1.CompactTextString(m) }
-func (*LookupRequest) ProtoMessage()               {}
-func (*LookupRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (m *DirEnt) Reset()                    { *m = DirEnt{} }
+func (m *DirEnt) String() string            { return proto1.CompactTextString(m) }
+func (*DirEnt) ProtoMessage()               {}
+func (*DirEnt) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-// Attr. fields are optional by default in proto3, so
-// clients don't have to send all fields when performing an
-// attr update for example. These might not all be needed
-// but i got tired of constantly forgetting fields.
+func (m *DirEnt) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// Attr
 type Attr struct {
 	Inode  uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
 	Atime  int64  `protobuf:"varint,2,opt,name=atime" json:"atime,omitempty"`
@@ -92,24 +112,67 @@ func (m *Attr) String() string            { return proto1.CompactTextString(m) }
 func (*Attr) ProtoMessage()               {}
 func (*Attr) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
+// SetAttrRequest
 type SetAttrRequest struct {
-	SetMode  bool   `protobuf:"varint,1,opt,name=setMode" json:"setMode,omitempty"`
-	SetMtime bool   `protobuf:"varint,2,opt,name=setMtime" json:"setMtime,omitempty"`
-	SetSize  bool   `protobuf:"varint,3,opt,name=setSize" json:"setSize,omitempty"`
-	SetUid   bool   `protobuf:"varint,4,opt,name=setUid" json:"setUid,omitempty"`
-	SetGid   bool   `protobuf:"varint,5,opt,name=setGid" json:"setGid,omitempty"`
-	Inode    uint64 `protobuf:"varint,6,opt,name=inode" json:"inode,omitempty"`
-	Mtime    int64  `protobuf:"varint,7,opt,name=mtime" json:"mtime,omitempty"`
-	Mode     uint32 `protobuf:"varint,8,opt,name=mode" json:"mode,omitempty"`
-	Size     uint64 `protobuf:"varint,9,opt,name=size" json:"size,omitempty"`
-	Uid      uint32 `protobuf:"varint,10,opt,name=uid" json:"uid,omitempty"`
-	Gid      uint32 `protobuf:"varint,11,opt,name=gid" json:"gid,omitempty"`
+	Attr  *Attr  `protobuf:"bytes,1,opt,name=attr" json:"attr,omitempty"`
+	Valid uint32 `protobuf:"varint,2,opt,name=valid" json:"valid,omitempty"`
 }
 
 func (m *SetAttrRequest) Reset()                    { *m = SetAttrRequest{} }
 func (m *SetAttrRequest) String() string            { return proto1.CompactTextString(m) }
 func (*SetAttrRequest) ProtoMessage()               {}
 func (*SetAttrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *SetAttrRequest) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// SetAttrResponse
+type SetAttrResponse struct {
+	Attr *Attr `protobuf:"bytes,1,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *SetAttrResponse) Reset()                    { *m = SetAttrResponse{} }
+func (m *SetAttrResponse) String() string            { return proto1.CompactTextString(m) }
+func (*SetAttrResponse) ProtoMessage()               {}
+func (*SetAttrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *SetAttrResponse) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// GetAttrRequest
+type GetAttrRequest struct {
+	Inode uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+}
+
+func (m *GetAttrRequest) Reset()                    { *m = GetAttrRequest{} }
+func (m *GetAttrRequest) String() string            { return proto1.CompactTextString(m) }
+func (*GetAttrRequest) ProtoMessage()               {}
+func (*GetAttrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+// GetAttrResponse
+type GetAttrResponse struct {
+	Attr *Attr `protobuf:"bytes,1,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *GetAttrResponse) Reset()                    { *m = GetAttrResponse{} }
+func (m *GetAttrResponse) String() string            { return proto1.CompactTextString(m) }
+func (*GetAttrResponse) ProtoMessage()               {}
+func (*GetAttrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *GetAttrResponse) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
 
 // ReqadRequest
 type ReadRequest struct {
@@ -121,19 +184,30 @@ type ReadRequest struct {
 func (m *ReadRequest) Reset()                    { *m = ReadRequest{} }
 func (m *ReadRequest) String() string            { return proto1.CompactTextString(m) }
 func (*ReadRequest) ProtoMessage()               {}
-func (*ReadRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*ReadRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+// ReadResponse
+type ReadResponse struct {
+	Inode   uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+	Payload []byte `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+}
+
+func (m *ReadResponse) Reset()                    { *m = ReadResponse{} }
+func (m *ReadResponse) String() string            { return proto1.CompactTextString(m) }
+func (*ReadResponse) ProtoMessage()               {}
+func (*ReadResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 // WriteRequest
-type FileChunk struct {
+type WriteRequest struct {
 	Inode   uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
 	Offset  int64  `protobuf:"varint,2,opt,name=offset" json:"offset,omitempty"`
 	Payload []byte `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
 }
 
-func (m *FileChunk) Reset()                    { *m = FileChunk{} }
-func (m *FileChunk) String() string            { return proto1.CompactTextString(m) }
-func (*FileChunk) ProtoMessage()               {}
-func (*FileChunk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (m *WriteRequest) Reset()                    { *m = WriteRequest{} }
+func (m *WriteRequest) String() string            { return proto1.CompactTextString(m) }
+func (*WriteRequest) ProtoMessage()               {}
+func (*WriteRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 // WriteResponse place holder. Maybe use an enum so
 // we can map to fuse errors ?
@@ -144,21 +218,194 @@ type WriteResponse struct {
 func (m *WriteResponse) Reset()                    { *m = WriteResponse{} }
 func (m *WriteResponse) String() string            { return proto1.CompactTextString(m) }
 func (*WriteResponse) ProtoMessage()               {}
-func (*WriteResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*WriteResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
-// DirEnt is a directory entry
-type DirEnt struct {
+// MkdirRequest
+type MkDirRequest struct {
 	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
 	Attr   *Attr  `protobuf:"bytes,3,opt,name=attr" json:"attr,omitempty"`
 }
 
-func (m *DirEnt) Reset()                    { *m = DirEnt{} }
-func (m *DirEnt) String() string            { return proto1.CompactTextString(m) }
-func (*DirEnt) ProtoMessage()               {}
-func (*DirEnt) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (m *MkDirRequest) Reset()                    { *m = MkDirRequest{} }
+func (m *MkDirRequest) String() string            { return proto1.CompactTextString(m) }
+func (*MkDirRequest) ProtoMessage()               {}
+func (*MkDirRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
-func (m *DirEnt) GetAttr() *Attr {
+func (m *MkDirRequest) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// MkdirResponse
+type MkDirResponse struct {
+	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Attr *Attr  `protobuf:"bytes,2,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *MkDirResponse) Reset()                    { *m = MkDirResponse{} }
+func (m *MkDirResponse) String() string            { return proto1.CompactTextString(m) }
+func (*MkDirResponse) ProtoMessage()               {}
+func (*MkDirResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+func (m *MkDirResponse) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// CreateRequest
+type CreateRequest struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+	Attr   *Attr  `protobuf:"bytes,3,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *CreateRequest) Reset()                    { *m = CreateRequest{} }
+func (m *CreateRequest) String() string            { return proto1.CompactTextString(m) }
+func (*CreateRequest) ProtoMessage()               {}
+func (*CreateRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *CreateRequest) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// CreateResponse
+type CreateResponse struct {
+	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Attr *Attr  `protobuf:"bytes,2,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *CreateResponse) Reset()                    { *m = CreateResponse{} }
+func (m *CreateResponse) String() string            { return proto1.CompactTextString(m) }
+func (*CreateResponse) ProtoMessage()               {}
+func (*CreateResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+
+func (m *CreateResponse) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// RemoveRequest
+type RemoveRequest struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+}
+
+func (m *RemoveRequest) Reset()                    { *m = RemoveRequest{} }
+func (m *RemoveRequest) String() string            { return proto1.CompactTextString(m) }
+func (*RemoveRequest) ProtoMessage()               {}
+func (*RemoveRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+
+// RemoveResponse
+type RemoveResponse struct {
+	Status int32 `protobuf:"varint,1,opt,name=status" json:"status,omitempty"`
+}
+
+func (m *RemoveResponse) Reset()                    { *m = RemoveResponse{} }
+func (m *RemoveResponse) String() string            { return proto1.CompactTextString(m) }
+func (*RemoveResponse) ProtoMessage()               {}
+func (*RemoveResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+
+// LookupRequest
+type LookupRequest struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+}
+
+func (m *LookupRequest) Reset()                    { *m = LookupRequest{} }
+func (m *LookupRequest) String() string            { return proto1.CompactTextString(m) }
+func (*LookupRequest) ProtoMessage()               {}
+func (*LookupRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+
+// LookupResponse is a directory entry
+type LookupResponse struct {
+	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Attr *Attr  `protobuf:"bytes,2,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *LookupResponse) Reset()                    { *m = LookupResponse{} }
+func (m *LookupResponse) String() string            { return proto1.CompactTextString(m) }
+func (*LookupResponse) ProtoMessage()               {}
+func (*LookupResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+
+func (m *LookupResponse) GetAttr() *Attr {
+	if m != nil {
+		return m.Attr
+	}
+	return nil
+}
+
+// ReadDirAllRequest
+type ReadDirAllRequest struct {
+	Inode uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
+}
+
+func (m *ReadDirAllRequest) Reset()                    { *m = ReadDirAllRequest{} }
+func (m *ReadDirAllRequest) String() string            { return proto1.CompactTextString(m) }
+func (*ReadDirAllRequest) ProtoMessage()               {}
+func (*ReadDirAllRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{19} }
+
+// ReadDirAllResponse
+type ReadDirAllResponse struct {
+	DirEntries  []*DirEnt `protobuf:"bytes,1,rep,name=DirEntries" json:"DirEntries,omitempty"`
+	FileEntries []*DirEnt `protobuf:"bytes,2,rep,name=FileEntries" json:"FileEntries,omitempty"`
+}
+
+func (m *ReadDirAllResponse) Reset()                    { *m = ReadDirAllResponse{} }
+func (m *ReadDirAllResponse) String() string            { return proto1.CompactTextString(m) }
+func (*ReadDirAllResponse) ProtoMessage()               {}
+func (*ReadDirAllResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{20} }
+
+func (m *ReadDirAllResponse) GetDirEntries() []*DirEnt {
+	if m != nil {
+		return m.DirEntries
+	}
+	return nil
+}
+
+func (m *ReadDirAllResponse) GetFileEntries() []*DirEnt {
+	if m != nil {
+		return m.FileEntries
+	}
+	return nil
+}
+
+// SymlinkRequest
+type SymlinkRequest struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+	Target string `protobuf:"bytes,3,opt,name=target" json:"target,omitempty"`
+	Uid    uint32 `protobuf:"varint,4,opt,name=uid" json:"uid,omitempty"`
+	Gid    uint32 `protobuf:"varint,5,opt,name=gid" json:"gid,omitempty"`
+}
+
+func (m *SymlinkRequest) Reset()                    { *m = SymlinkRequest{} }
+func (m *SymlinkRequest) String() string            { return proto1.CompactTextString(m) }
+func (*SymlinkRequest) ProtoMessage()               {}
+func (*SymlinkRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{21} }
+
+// SymlinkResponse
+type SymlinkResponse struct {
+	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
+	Attr   *Attr  `protobuf:"bytes,3,opt,name=attr" json:"attr,omitempty"`
+}
+
+func (m *SymlinkResponse) Reset()                    { *m = SymlinkResponse{} }
+func (m *SymlinkResponse) String() string            { return proto1.CompactTextString(m) }
+func (*SymlinkResponse) ProtoMessage()               {}
+func (*SymlinkResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{22} }
+
+func (m *SymlinkResponse) GetAttr() *Attr {
 	if m != nil {
 		return m.Attr
 	}
@@ -174,7 +421,7 @@ type DirEntries struct {
 func (m *DirEntries) Reset()                    { *m = DirEntries{} }
 func (m *DirEntries) String() string            { return proto1.CompactTextString(m) }
 func (*DirEntries) ProtoMessage()               {}
-func (*DirEntries) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*DirEntries) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{23} }
 
 func (m *DirEntries) GetDirEntries() []*DirEnt {
 	if m != nil {
@@ -190,19 +437,17 @@ func (m *DirEntries) GetFileEntries() []*DirEnt {
 	return nil
 }
 
-// Symlink
-type SymlinkRequest struct {
-	Name   string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	Parent uint64 `protobuf:"varint,2,opt,name=parent" json:"parent,omitempty"`
-	Target string `protobuf:"bytes,3,opt,name=target" json:"target,omitempty"`
+// ReadlinkRequest
+type ReadlinkRequest struct {
+	Inode uint64 `protobuf:"varint,1,opt,name=inode" json:"inode,omitempty"`
 }
 
-func (m *SymlinkRequest) Reset()                    { *m = SymlinkRequest{} }
-func (m *SymlinkRequest) String() string            { return proto1.CompactTextString(m) }
-func (*SymlinkRequest) ProtoMessage()               {}
-func (*SymlinkRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (m *ReadlinkRequest) Reset()                    { *m = ReadlinkRequest{} }
+func (m *ReadlinkRequest) String() string            { return proto1.CompactTextString(m) }
+func (*ReadlinkRequest) ProtoMessage()               {}
+func (*ReadlinkRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{24} }
 
-// Readlink
+// ReadlinkResponse
 type ReadlinkResponse struct {
 	Target string `protobuf:"bytes,1,opt,name=target" json:"target,omitempty"`
 }
@@ -210,7 +455,7 @@ type ReadlinkResponse struct {
 func (m *ReadlinkResponse) Reset()                    { *m = ReadlinkResponse{} }
 func (m *ReadlinkResponse) String() string            { return proto1.CompactTextString(m) }
 func (*ReadlinkResponse) ProtoMessage()               {}
-func (*ReadlinkResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+func (*ReadlinkResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{25} }
 
 // Getxattr
 type GetxattrRequest struct {
@@ -223,7 +468,7 @@ type GetxattrRequest struct {
 func (m *GetxattrRequest) Reset()                    { *m = GetxattrRequest{} }
 func (m *GetxattrRequest) String() string            { return proto1.CompactTextString(m) }
 func (*GetxattrRequest) ProtoMessage()               {}
-func (*GetxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (*GetxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{26} }
 
 type GetxattrResponse struct {
 	Xattr []byte `protobuf:"bytes,1,opt,name=xattr,proto3" json:"xattr,omitempty"`
@@ -232,7 +477,7 @@ type GetxattrResponse struct {
 func (m *GetxattrResponse) Reset()                    { *m = GetxattrResponse{} }
 func (m *GetxattrResponse) String() string            { return proto1.CompactTextString(m) }
 func (*GetxattrResponse) ProtoMessage()               {}
-func (*GetxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (*GetxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{27} }
 
 // Setxattr
 type SetxattrRequest struct {
@@ -246,7 +491,7 @@ type SetxattrRequest struct {
 func (m *SetxattrRequest) Reset()                    { *m = SetxattrRequest{} }
 func (m *SetxattrRequest) String() string            { return proto1.CompactTextString(m) }
 func (*SetxattrRequest) ProtoMessage()               {}
-func (*SetxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+func (*SetxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{28} }
 
 type SetxattrResponse struct {
 }
@@ -254,7 +499,7 @@ type SetxattrResponse struct {
 func (m *SetxattrResponse) Reset()                    { *m = SetxattrResponse{} }
 func (m *SetxattrResponse) String() string            { return proto1.CompactTextString(m) }
 func (*SetxattrResponse) ProtoMessage()               {}
-func (*SetxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+func (*SetxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{29} }
 
 // Listxattr
 type ListxattrRequest struct {
@@ -266,7 +511,7 @@ type ListxattrRequest struct {
 func (m *ListxattrRequest) Reset()                    { *m = ListxattrRequest{} }
 func (m *ListxattrRequest) String() string            { return proto1.CompactTextString(m) }
 func (*ListxattrRequest) ProtoMessage()               {}
-func (*ListxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+func (*ListxattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{30} }
 
 type ListxattrResponse struct {
 	Xattr []byte `protobuf:"bytes,1,opt,name=xattr,proto3" json:"xattr,omitempty"`
@@ -275,7 +520,7 @@ type ListxattrResponse struct {
 func (m *ListxattrResponse) Reset()                    { *m = ListxattrResponse{} }
 func (m *ListxattrResponse) String() string            { return proto1.CompactTextString(m) }
 func (*ListxattrResponse) ProtoMessage()               {}
-func (*ListxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+func (*ListxattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{31} }
 
 // Removexattr
 type RemovexattrRequest struct {
@@ -286,7 +531,7 @@ type RemovexattrRequest struct {
 func (m *RemovexattrRequest) Reset()                    { *m = RemovexattrRequest{} }
 func (m *RemovexattrRequest) String() string            { return proto1.CompactTextString(m) }
 func (*RemovexattrRequest) ProtoMessage()               {}
-func (*RemovexattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+func (*RemovexattrRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{32} }
 
 type RemovexattrResponse struct {
 }
@@ -294,7 +539,7 @@ type RemovexattrResponse struct {
 func (m *RemovexattrResponse) Reset()                    { *m = RemovexattrResponse{} }
 func (m *RemovexattrResponse) String() string            { return proto1.CompactTextString(m) }
 func (*RemovexattrResponse) ProtoMessage()               {}
-func (*RemovexattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+func (*RemovexattrResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{33} }
 
 // Rename
 type RenameRequest struct {
@@ -307,7 +552,7 @@ type RenameRequest struct {
 func (m *RenameRequest) Reset()                    { *m = RenameRequest{} }
 func (m *RenameRequest) String() string            { return proto1.CompactTextString(m) }
 func (*RenameRequest) ProtoMessage()               {}
-func (*RenameRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{19} }
+func (*RenameRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{34} }
 
 type RenameResponse struct {
 }
@@ -315,7 +560,7 @@ type RenameResponse struct {
 func (m *RenameResponse) Reset()                    { *m = RenameResponse{} }
 func (m *RenameResponse) String() string            { return proto1.CompactTextString(m) }
 func (*RenameResponse) ProtoMessage()               {}
-func (*RenameResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{20} }
+func (*RenameResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{35} }
 
 // Statfs
 type StatfsRequest struct {
@@ -324,7 +569,7 @@ type StatfsRequest struct {
 func (m *StatfsRequest) Reset()                    { *m = StatfsRequest{} }
 func (m *StatfsRequest) String() string            { return proto1.CompactTextString(m) }
 func (*StatfsRequest) ProtoMessage()               {}
-func (*StatfsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{21} }
+func (*StatfsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{36} }
 
 type StatfsResponse struct {
 	Blocks  uint64 `protobuf:"varint,1,opt,name=blocks" json:"blocks,omitempty"`
@@ -340,19 +585,34 @@ type StatfsResponse struct {
 func (m *StatfsResponse) Reset()                    { *m = StatfsResponse{} }
 func (m *StatfsResponse) String() string            { return proto1.CompactTextString(m) }
 func (*StatfsResponse) ProtoMessage()               {}
-func (*StatfsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{22} }
+func (*StatfsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{37} }
 
 func init() {
 	proto1.RegisterType((*Node)(nil), "proto.Node")
-	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
+	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
 	proto1.RegisterType((*Attr)(nil), "proto.Attr")
 	proto1.RegisterType((*SetAttrRequest)(nil), "proto.SetAttrRequest")
+	proto1.RegisterType((*SetAttrResponse)(nil), "proto.SetAttrResponse")
+	proto1.RegisterType((*GetAttrRequest)(nil), "proto.GetAttrRequest")
+	proto1.RegisterType((*GetAttrResponse)(nil), "proto.GetAttrResponse")
 	proto1.RegisterType((*ReadRequest)(nil), "proto.ReadRequest")
-	proto1.RegisterType((*FileChunk)(nil), "proto.FileChunk")
+	proto1.RegisterType((*ReadResponse)(nil), "proto.ReadResponse")
+	proto1.RegisterType((*WriteRequest)(nil), "proto.WriteRequest")
 	proto1.RegisterType((*WriteResponse)(nil), "proto.WriteResponse")
-	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
-	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
+	proto1.RegisterType((*MkDirRequest)(nil), "proto.MkDirRequest")
+	proto1.RegisterType((*MkDirResponse)(nil), "proto.MkDirResponse")
+	proto1.RegisterType((*CreateRequest)(nil), "proto.CreateRequest")
+	proto1.RegisterType((*CreateResponse)(nil), "proto.CreateResponse")
+	proto1.RegisterType((*RemoveRequest)(nil), "proto.RemoveRequest")
+	proto1.RegisterType((*RemoveResponse)(nil), "proto.RemoveResponse")
+	proto1.RegisterType((*LookupRequest)(nil), "proto.LookupRequest")
+	proto1.RegisterType((*LookupResponse)(nil), "proto.LookupResponse")
+	proto1.RegisterType((*ReadDirAllRequest)(nil), "proto.ReadDirAllRequest")
+	proto1.RegisterType((*ReadDirAllResponse)(nil), "proto.ReadDirAllResponse")
 	proto1.RegisterType((*SymlinkRequest)(nil), "proto.SymlinkRequest")
+	proto1.RegisterType((*SymlinkResponse)(nil), "proto.SymlinkResponse")
+	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
+	proto1.RegisterType((*ReadlinkRequest)(nil), "proto.ReadlinkRequest")
 	proto1.RegisterType((*ReadlinkResponse)(nil), "proto.ReadlinkResponse")
 	proto1.RegisterType((*GetxattrRequest)(nil), "proto.GetxattrRequest")
 	proto1.RegisterType((*GetxattrResponse)(nil), "proto.GetxattrResponse")
@@ -375,17 +635,17 @@ var _ grpc.ClientConn
 // Client API for Api service
 
 type ApiClient interface {
-	SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error)
-	GetAttr(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Attr, error)
-	Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*FileChunk, error)
-	Write(ctx context.Context, in *FileChunk, opts ...grpc.CallOption) (*WriteResponse, error)
-	MkDir(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*DirEnt, error)
-	Create(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*DirEnt, error)
-	Remove(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*WriteResponse, error)
-	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*DirEnt, error)
-	ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallOption) (*DirEntries, error)
-	Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*DirEnt, error)
-	Readlink(ctx context.Context, in *Node, opts ...grpc.CallOption) (*ReadlinkResponse, error)
+	SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*SetAttrResponse, error)
+	GetAttr(ctx context.Context, in *GetAttrRequest, opts ...grpc.CallOption) (*GetAttrResponse, error)
+	Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*ReadResponse, error)
+	Write(ctx context.Context, in *WriteRequest, opts ...grpc.CallOption) (*WriteResponse, error)
+	MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error)
+	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
+	Remove(ctx context.Context, in *RemoveRequest, opts ...grpc.CallOption) (*RemoveResponse, error)
+	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
+	ReadDirAll(ctx context.Context, in *ReadDirAllRequest, opts ...grpc.CallOption) (*ReadDirAllResponse, error)
+	Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*SymlinkResponse, error)
+	Readlink(ctx context.Context, in *ReadlinkRequest, opts ...grpc.CallOption) (*ReadlinkResponse, error)
 	Getxattr(ctx context.Context, in *GetxattrRequest, opts ...grpc.CallOption) (*GetxattrResponse, error)
 	Setxattr(ctx context.Context, in *SetxattrRequest, opts ...grpc.CallOption) (*SetxattrResponse, error)
 	Listxattr(ctx context.Context, in *ListxattrRequest, opts ...grpc.CallOption) (*ListxattrResponse, error)
@@ -402,8 +662,8 @@ func NewApiClient(cc *grpc.ClientConn) ApiClient {
 	return &apiClient{cc}
 }
 
-func (c *apiClient) SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*Attr, error) {
-	out := new(Attr)
+func (c *apiClient) SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grpc.CallOption) (*SetAttrResponse, error) {
+	out := new(SetAttrResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/SetAttr", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -411,8 +671,8 @@ func (c *apiClient) SetAttr(ctx context.Context, in *SetAttrRequest, opts ...grp
 	return out, nil
 }
 
-func (c *apiClient) GetAttr(ctx context.Context, in *Node, opts ...grpc.CallOption) (*Attr, error) {
-	out := new(Attr)
+func (c *apiClient) GetAttr(ctx context.Context, in *GetAttrRequest, opts ...grpc.CallOption) (*GetAttrResponse, error) {
+	out := new(GetAttrResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/GetAttr", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -420,8 +680,8 @@ func (c *apiClient) GetAttr(ctx context.Context, in *Node, opts ...grpc.CallOpti
 	return out, nil
 }
 
-func (c *apiClient) Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*FileChunk, error) {
-	out := new(FileChunk)
+func (c *apiClient) Read(ctx context.Context, in *ReadRequest, opts ...grpc.CallOption) (*ReadResponse, error) {
+	out := new(ReadResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Read", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -429,7 +689,7 @@ func (c *apiClient) Read(ctx context.Context, in *ReadRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *apiClient) Write(ctx context.Context, in *FileChunk, opts ...grpc.CallOption) (*WriteResponse, error) {
+func (c *apiClient) Write(ctx context.Context, in *WriteRequest, opts ...grpc.CallOption) (*WriteResponse, error) {
 	out := new(WriteResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Write", in, out, c.cc, opts...)
 	if err != nil {
@@ -438,8 +698,8 @@ func (c *apiClient) Write(ctx context.Context, in *FileChunk, opts ...grpc.CallO
 	return out, nil
 }
 
-func (c *apiClient) MkDir(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*DirEnt, error) {
-	out := new(DirEnt)
+func (c *apiClient) MkDir(ctx context.Context, in *MkDirRequest, opts ...grpc.CallOption) (*MkDirResponse, error) {
+	out := new(MkDirResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/MkDir", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -447,8 +707,8 @@ func (c *apiClient) MkDir(ctx context.Context, in *DirEnt, opts ...grpc.CallOpti
 	return out, nil
 }
 
-func (c *apiClient) Create(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*DirEnt, error) {
-	out := new(DirEnt)
+func (c *apiClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error) {
+	out := new(CreateResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Create", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -456,8 +716,8 @@ func (c *apiClient) Create(ctx context.Context, in *DirEnt, opts ...grpc.CallOpt
 	return out, nil
 }
 
-func (c *apiClient) Remove(ctx context.Context, in *DirEnt, opts ...grpc.CallOption) (*WriteResponse, error) {
-	out := new(WriteResponse)
+func (c *apiClient) Remove(ctx context.Context, in *RemoveRequest, opts ...grpc.CallOption) (*RemoveResponse, error) {
+	out := new(RemoveResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Remove", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -465,8 +725,8 @@ func (c *apiClient) Remove(ctx context.Context, in *DirEnt, opts ...grpc.CallOpt
 	return out, nil
 }
 
-func (c *apiClient) Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*DirEnt, error) {
-	out := new(DirEnt)
+func (c *apiClient) Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error) {
+	out := new(LookupResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Lookup", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -474,8 +734,8 @@ func (c *apiClient) Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *apiClient) ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallOption) (*DirEntries, error) {
-	out := new(DirEntries)
+func (c *apiClient) ReadDirAll(ctx context.Context, in *ReadDirAllRequest, opts ...grpc.CallOption) (*ReadDirAllResponse, error) {
+	out := new(ReadDirAllResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/ReadDirAll", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -483,8 +743,8 @@ func (c *apiClient) ReadDirAll(ctx context.Context, in *Node, opts ...grpc.CallO
 	return out, nil
 }
 
-func (c *apiClient) Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*DirEnt, error) {
-	out := new(DirEnt)
+func (c *apiClient) Symlink(ctx context.Context, in *SymlinkRequest, opts ...grpc.CallOption) (*SymlinkResponse, error) {
+	out := new(SymlinkResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Symlink", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -492,7 +752,7 @@ func (c *apiClient) Symlink(ctx context.Context, in *SymlinkRequest, opts ...grp
 	return out, nil
 }
 
-func (c *apiClient) Readlink(ctx context.Context, in *Node, opts ...grpc.CallOption) (*ReadlinkResponse, error) {
+func (c *apiClient) Readlink(ctx context.Context, in *ReadlinkRequest, opts ...grpc.CallOption) (*ReadlinkResponse, error) {
 	out := new(ReadlinkResponse)
 	err := grpc.Invoke(ctx, "/proto.Api/Readlink", in, out, c.cc, opts...)
 	if err != nil {
@@ -558,17 +818,17 @@ func (c *apiClient) Statfs(ctx context.Context, in *StatfsRequest, opts ...grpc.
 // Server API for Api service
 
 type ApiServer interface {
-	SetAttr(context.Context, *SetAttrRequest) (*Attr, error)
-	GetAttr(context.Context, *Node) (*Attr, error)
-	Read(context.Context, *ReadRequest) (*FileChunk, error)
-	Write(context.Context, *FileChunk) (*WriteResponse, error)
-	MkDir(context.Context, *DirEnt) (*DirEnt, error)
-	Create(context.Context, *DirEnt) (*DirEnt, error)
-	Remove(context.Context, *DirEnt) (*WriteResponse, error)
-	Lookup(context.Context, *LookupRequest) (*DirEnt, error)
-	ReadDirAll(context.Context, *Node) (*DirEntries, error)
-	Symlink(context.Context, *SymlinkRequest) (*DirEnt, error)
-	Readlink(context.Context, *Node) (*ReadlinkResponse, error)
+	SetAttr(context.Context, *SetAttrRequest) (*SetAttrResponse, error)
+	GetAttr(context.Context, *GetAttrRequest) (*GetAttrResponse, error)
+	Read(context.Context, *ReadRequest) (*ReadResponse, error)
+	Write(context.Context, *WriteRequest) (*WriteResponse, error)
+	MkDir(context.Context, *MkDirRequest) (*MkDirResponse, error)
+	Create(context.Context, *CreateRequest) (*CreateResponse, error)
+	Remove(context.Context, *RemoveRequest) (*RemoveResponse, error)
+	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
+	ReadDirAll(context.Context, *ReadDirAllRequest) (*ReadDirAllResponse, error)
+	Symlink(context.Context, *SymlinkRequest) (*SymlinkResponse, error)
+	Readlink(context.Context, *ReadlinkRequest) (*ReadlinkResponse, error)
 	Getxattr(context.Context, *GetxattrRequest) (*GetxattrResponse, error)
 	Setxattr(context.Context, *SetxattrRequest) (*SetxattrResponse, error)
 	Listxattr(context.Context, *ListxattrRequest) (*ListxattrResponse, error)
@@ -594,7 +854,7 @@ func _Api_SetAttr_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 func _Api_GetAttr_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(Node)
+	in := new(GetAttrRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -618,7 +878,7 @@ func _Api_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{
 }
 
 func _Api_Write_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(FileChunk)
+	in := new(WriteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -630,7 +890,7 @@ func _Api_Write_Handler(srv interface{}, ctx context.Context, dec func(interface
 }
 
 func _Api_MkDir_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(DirEnt)
+	in := new(MkDirRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -642,7 +902,7 @@ func _Api_MkDir_Handler(srv interface{}, ctx context.Context, dec func(interface
 }
 
 func _Api_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(DirEnt)
+	in := new(CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -654,7 +914,7 @@ func _Api_Create_Handler(srv interface{}, ctx context.Context, dec func(interfac
 }
 
 func _Api_Remove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(DirEnt)
+	in := new(RemoveRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -678,7 +938,7 @@ func _Api_Lookup_Handler(srv interface{}, ctx context.Context, dec func(interfac
 }
 
 func _Api_ReadDirAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(Node)
+	in := new(ReadDirAllRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -702,7 +962,7 @@ func _Api_Symlink_Handler(srv interface{}, ctx context.Context, dec func(interfa
 }
 
 func _Api_Readlink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error) {
-	in := new(Node)
+	in := new(ReadlinkRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -862,62 +1122,67 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 }
 
 var fileDescriptor0 = []byte{
-	// 898 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x94, 0x55, 0x4f, 0x6f, 0xeb, 0x44,
-	0x10, 0x6f, 0x12, 0x3b, 0x7f, 0x26, 0x75, 0x92, 0xb7, 0x50, 0xc8, 0xf3, 0x05, 0xde, 0x4a, 0x88,
-	0x77, 0x21, 0x4f, 0xaf, 0x1c, 0x90, 0x40, 0x20, 0xa2, 0x07, 0xed, 0xa5, 0xad, 0x44, 0x2c, 0xc4,
-	0x0d, 0xb4, 0x69, 0x36, 0xc5, 0x8a, 0x63, 0x1b, 0xdb, 0x29, 0x94, 0x0f, 0xc0, 0x8d, 0x33, 0x5f,
-	0x85, 0x8f, 0xc7, 0xec, 0x78, 0x77, 0x63, 0x3b, 0xad, 0x52, 0x4e, 0xc9, 0xcc, 0xfe, 0xe6, 0x37,
-	0x7f, 0x76, 0xf6, 0x67, 0x18, 0x25, 0x49, 0x56, 0xfc, 0x22, 0xd2, 0x70, 0x96, 0x66, 0x49, 0x91,
-	0x30, 0x97, 0x7e, 0xf8, 0x19, 0x38, 0x37, 0xc9, 0x4a, 0x32, 0x0f, 0xdc, 0x30, 0xc6, 0x3f, 0xd3,
-	0xd6, 0xc7, 0xad, 0xd7, 0x0e, 0xff, 0x0c, 0xbc, 0xab, 0x24, 0xd9, 0xec, 0xd2, 0x85, 0xfc, 0x6d,
-	0x27, 0xf3, 0x82, 0x9d, 0x82, 0x13, 0x8b, 0x6d, 0x79, 0x3c, 0x60, 0x23, 0xe8, 0xa6, 0x22, 0x93,
-	0x71, 0x31, 0x6d, 0x13, 0xfc, 0x9f, 0x16, 0x38, 0xf3, 0xa2, 0xc8, 0x1a, 0x34, 0xca, 0x14, 0x45,
-	0x88, 0x61, 0x0a, 0xd6, 0x51, 0xe6, 0x96, 0xcc, 0x8e, 0x31, 0x6f, 0xc9, 0x74, 0xc8, 0x44, 0xd2,
-	0xdb, 0x8c, 0x6c, 0x97, 0x6c, 0x4c, 0xb9, 0x55, 0x54, 0x5d, 0xb4, 0x3c, 0x05, 0xbe, 0x17, 0x51,
-	0xb8, 0x9a, 0xf6, 0xd0, 0x74, 0xd5, 0x61, 0x1e, 0xfe, 0x29, 0xa7, 0x7d, 0xca, 0x33, 0x84, 0xce,
-	0x0e, 0x8f, 0x06, 0x84, 0x44, 0xe3, 0x0e, 0x0d, 0x50, 0x06, 0xff, 0xb7, 0x05, 0xa3, 0x40, 0x16,
-	0xaa, 0x38, 0xd3, 0xca, 0x18, 0x7a, 0xb9, 0x2c, 0xae, 0x4d, 0x95, 0x7d, 0x36, 0x81, 0xbe, 0x72,
-	0xd8, 0x42, 0xfb, 0x1a, 0x12, 0xa8, 0x04, 0x1d, 0x72, 0x60, 0x6d, 0xe8, 0xf8, 0x11, 0x69, 0x9d,
-	0x8a, 0x7d, 0x89, 0xb6, 0x4b, 0xb6, 0xed, 0xbb, 0x6b, 0xfa, 0x2e, 0x1b, 0xed, 0xd5, 0x3a, 0xe9,
-	0x53, 0x7d, 0xa6, 0xf4, 0x41, 0xb5, 0x74, 0xa8, 0x96, 0x3e, 0xa4, 0xd2, 0xbf, 0x84, 0xe1, 0x42,
-	0x8a, 0x95, 0x29, 0xbb, 0x31, 0x5a, 0xac, 0x20, 0x59, 0xaf, 0xb1, 0x08, 0x3d, 0x5b, 0xc3, 0x4a,
-	0xa3, 0xe5, 0x5f, 0xc1, 0xe0, 0x22, 0x8c, 0xe4, 0xbb, 0x5f, 0x77, 0xf1, 0xe6, 0x58, 0x24, 0x36,
-	0x9b, 0x8a, 0x87, 0x28, 0x11, 0x2b, 0x0a, 0x3e, 0xe5, 0x1f, 0x81, 0xf7, 0x53, 0x16, 0x16, 0x72,
-	0x21, 0xf3, 0x34, 0x89, 0x73, 0x49, 0xdd, 0x16, 0xa2, 0xd8, 0xe5, 0xc4, 0xe0, 0xf2, 0x39, 0x74,
-	0xbf, 0x0b, 0xb3, 0xef, 0xe3, 0x23, 0x6b, 0xc1, 0x5e, 0x82, 0x23, 0x70, 0xf0, 0x44, 0x3b, 0x3c,
-	0x1f, 0x96, 0x9b, 0x37, 0x53, 0x77, 0xc1, 0x03, 0x80, 0x92, 0x22, 0x0b, 0x65, 0xce, 0x5e, 0x55,
-	0x2d, 0x24, 0xeb, 0x20, 0xdc, 0xd3, 0x70, 0x9d, 0x89, 0xc3, 0x50, 0x75, 0x64, 0x30, 0xed, 0x47,
-	0x30, 0xfc, 0x1b, 0xbc, 0xeb, 0x87, 0x6d, 0x14, 0xc6, 0x9b, 0x67, 0xad, 0xad, 0xb2, 0x0b, 0x91,
-	0xdd, 0xe1, 0x24, 0x54, 0x85, 0x03, 0xce, 0x61, 0xa2, 0x26, 0x5e, 0x12, 0xec, 0x7b, 0xd7, 0x18,
-	0xe2, 0xe0, 0x37, 0x30, 0xbe, 0x94, 0xc5, 0x1f, 0xa2, 0xb2, 0x50, 0x8d, 0xf9, 0x9a, 0x9c, 0x6d,
-	0xca, 0x59, 0xbd, 0x17, 0x4f, 0xad, 0x5a, 0x9a, 0xe4, 0x61, 0x11, 0x26, 0x31, 0x6d, 0x92, 0xc7,
-	0x5f, 0xc1, 0x64, 0xcf, 0xa7, 0x73, 0x22, 0x21, 0x39, 0x88, 0xf0, 0x94, 0xff, 0x0c, 0xe3, 0xe0,
-	0xff, 0xa4, 0xb4, 0xe1, 0x74, 0x9d, 0x87, 0x39, 0x15, 0x60, 0x1d, 0x89, 0xbb, 0x9c, 0x96, 0xd7,
-	0xe3, 0x0c, 0x26, 0x41, 0xa3, 0x04, 0xbc, 0xe2, 0xc9, 0x55, 0x98, 0x1f, 0x4b, 0x4a, 0x9d, 0xb5,
-	0x0f, 0x3a, 0xa3, 0x5e, 0x71, 0x9a, 0x2f, 0x2a, 0x14, 0x8f, 0xb7, 0xf6, 0x16, 0xd8, 0x42, 0x6e,
-	0x93, 0x7b, 0xf9, 0xec, 0xee, 0x50, 0xb1, 0xde, 0xab, 0x85, 0xe8, 0x82, 0x7f, 0x00, 0x6f, 0x21,
-	0x15, 0xcc, 0x90, 0xec, 0x2f, 0xdb, 0xae, 0x7d, 0x2c, 0x7f, 0xc7, 0x4d, 0xd1, 0x97, 0x8f, 0x6b,
-	0x9f, 0x44, 0xab, 0x1b, 0xa1, 0xe5, 0x68, 0xa0, 0x1c, 0x08, 0x20, 0x87, 0x43, 0x99, 0x26, 0x30,
-	0x32, 0x94, 0x3a, 0xc9, 0x18, 0xbc, 0x00, 0x1f, 0xc2, 0x3a, 0xd7, 0x49, 0xf8, 0xdf, 0x4a, 0x5e,
-	0xb4, 0x67, 0xbf, 0x30, 0xcb, 0x28, 0xb9, 0xdd, 0xe4, 0x7b, 0x0d, 0x5c, 0xae, 0x33, 0x29, 0xf7,
-	0x3b, 0xb7, 0x14, 0xf7, 0x22, 0x8c, 0x28, 0x2b, 0x1d, 0xaf, 0x71, 0xaf, 0x73, 0xca, 0x59, 0x9a,
-	0x84, 0x76, 0x6d, 0x30, 0x0d, 0xb9, 0x14, 0x41, 0x55, 0x22, 0xd6, 0x13, 0xc9, 0x98, 0x94, 0xc5,
-	0x53, 0x6c, 0xeb, 0xcc, 0x0a, 0xa1, 0x77, 0xfe, 0x57, 0x0f, 0x3a, 0xf3, 0x34, 0x64, 0x6f, 0xa0,
-	0xa7, 0x55, 0x8f, 0x9d, 0xe9, 0x37, 0x52, 0x57, 0x41, 0xbf, 0xf6, 0x1a, 0x4f, 0xd8, 0x27, 0xd0,
-	0xbb, 0xd4, 0x01, 0xe6, 0x44, 0x7d, 0x17, 0x9a, 0xb0, 0x19, 0x38, 0xea, 0x85, 0x30, 0xa6, 0xdd,
-	0x15, 0x81, 0xf2, 0x27, 0xda, 0x67, 0x85, 0x07, 0xf1, 0x6f, 0xc1, 0x25, 0x29, 0x61, 0x07, 0x87,
-	0xfe, 0xfb, 0xda, 0x53, 0x93, 0x1a, 0x0c, 0xf9, 0x14, 0xdc, 0xeb, 0x0d, 0x5e, 0x13, 0xab, 0x3f,
-	0x6e, 0xbf, 0xf1, 0xd6, 0x4f, 0xd8, 0x6b, 0xe8, 0xbe, 0xcb, 0xa4, 0x40, 0xf2, 0x63, 0xc8, 0x37,
-	0xd0, 0x2d, 0x57, 0xa6, 0x89, 0x7c, 0xaa, 0x06, 0x0c, 0x28, 0x3f, 0x7f, 0xcc, 0x20, 0x6a, 0x5f,
-	0xc3, 0xc3, 0x0c, 0x33, 0x00, 0x35, 0x0a, 0xb4, 0xe7, 0x51, 0x54, 0x9f, 0xe0, 0x8b, 0x1a, 0x56,
-	0x89, 0x17, 0xcd, 0xa5, 0xa7, 0x95, 0x6a, 0x7f, 0x3f, 0x35, 0xe5, 0x3a, 0x4c, 0x71, 0x0e, 0x7d,
-	0x23, 0x4e, 0xf5, 0x04, 0x1f, 0x56, 0xee, 0xa2, 0x2a, 0x5d, 0x18, 0xf3, 0x35, 0xf4, 0x8d, 0xb8,
-	0xb0, 0x0f, 0x34, 0xac, 0xa1, 0x5e, 0x36, 0xbc, 0xa9, 0x42, 0x65, 0x78, 0xd0, 0x0c, 0x0f, 0x9e,
-	0x08, 0x0f, 0x0e, 0xc3, 0xbf, 0x85, 0x81, 0x15, 0x00, 0x66, 0x70, 0x4d, 0x55, 0xf1, 0xa7, 0x87,
-	0x07, 0x96, 0xe1, 0x42, 0x7d, 0x02, 0xed, 0x5b, 0x67, 0x2f, 0x6d, 0xa7, 0x4d, 0xc9, 0xf0, 0xfd,
-	0xc7, 0x8e, 0x2c, 0xcf, 0x17, 0x6a, 0x01, 0xd4, 0xcb, 0xb1, 0xf7, 0x59, 0xd3, 0x0a, 0xff, 0xac,
-	0xe1, 0xad, 0x06, 0x96, 0xcf, 0xdb, 0x06, 0xd6, 0xde, 0xbf, 0x0d, 0xac, 0x6b, 0x00, 0x3f, 0x59,
-	0x76, 0xc9, 0xff, 0xf9, 0x7f, 0x01, 0x00, 0x00, 0xff, 0xff, 0x9c, 0xa6, 0x05, 0xd8, 0x77, 0x09,
-	0x00, 0x00,
+	// 984 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xac, 0x56, 0xcf, 0x6f, 0xe3, 0x44,
+	0x14, 0xde, 0xc4, 0x76, 0xda, 0xbe, 0xc4, 0x69, 0x98, 0xa5, 0x4b, 0x9a, 0xcb, 0x76, 0xe7, 0xc4,
+	0x01, 0x2a, 0xed, 0x82, 0x04, 0x54, 0x02, 0x51, 0x2d, 0x6c, 0x10, 0x5a, 0x2a, 0xd1, 0x1c, 0x40,
+	0x42, 0x02, 0x4d, 0xdb, 0x49, 0x65, 0xd5, 0xb1, 0x8d, 0xed, 0x96, 0x5d, 0x6e, 0xfc, 0x01, 0x9c,
+	0xf9, 0x77, 0x79, 0xf3, 0x3c, 0x1e, 0xcf, 0xd8, 0x09, 0xa4, 0xd5, 0x9e, 0x9a, 0x37, 0xf3, 0xbe,
+	0xf7, 0xcb, 0x6f, 0xbe, 0xaf, 0x30, 0x4e, 0xd3, 0xbc, 0xfc, 0x4d, 0x64, 0xd1, 0x71, 0x96, 0xa7,
+	0x65, 0xca, 0x02, 0xfa, 0xc3, 0x0f, 0xc0, 0x3f, 0x4b, 0xaf, 0x24, 0x0b, 0x21, 0x88, 0x12, 0xfc,
+	0x31, 0xed, 0x1d, 0xf5, 0x3e, 0xf4, 0xf9, 0x29, 0x0c, 0xbe, 0x89, 0xf2, 0x6f, 0x93, 0x92, 0x8d,
+	0xc0, 0x4f, 0xc4, 0xaa, 0x3a, 0xdf, 0x63, 0x63, 0x18, 0x64, 0x22, 0x97, 0x49, 0x39, 0xed, 0x2b,
+	0x3f, 0x76, 0x08, 0xbe, 0x28, 0xcb, 0x7c, 0xea, 0xa1, 0x35, 0x7c, 0x31, 0xac, 0x62, 0x1f, 0x9f,
+	0xe2, 0x11, 0xff, 0xa7, 0x07, 0xbe, 0xfa, 0xd1, 0x0a, 0xad, 0x4c, 0x51, 0x46, 0x18, 0x51, 0x45,
+	0xf0, 0x94, 0xb9, 0x22, 0xd3, 0xab, 0xcd, 0x4b, 0x32, 0x7d, 0x32, 0x31, 0xdf, 0x65, 0x4e, 0x76,
+	0x40, 0x36, 0x56, 0xb3, 0x52, 0xa1, 0x06, 0x68, 0x85, 0xca, 0xf9, 0x4e, 0xc4, 0xd1, 0xd5, 0x74,
+	0x07, 0xcd, 0x40, 0x5d, 0x16, 0xd1, 0x9f, 0x72, 0xba, 0x4b, 0x79, 0x86, 0xe0, 0xdd, 0xe2, 0xd5,
+	0x1e, 0x79, 0xa2, 0x71, 0x8d, 0x06, 0x28, 0x83, 0x9f, 0xc0, 0x78, 0x21, 0x4b, 0x55, 0xdb, 0xb9,
+	0xfc, 0xfd, 0x56, 0x16, 0xa5, 0x69, 0xa3, 0xd7, 0x69, 0xa3, 0xc9, 0xd1, 0x27, 0xec, 0x47, 0xb0,
+	0x6f, 0xb0, 0x45, 0x96, 0x26, 0x85, 0xfc, 0x0f, 0x30, 0x7f, 0x0a, 0xe3, 0xb9, 0x9b, 0xa9, 0x35,
+	0x67, 0x0c, 0x37, 0xdf, 0x3e, 0xdc, 0x09, 0x0c, 0xcf, 0xa5, 0xb8, 0x5a, 0x1f, 0x4b, 0xcd, 0x2a,
+	0x5d, 0x2e, 0x0b, 0x59, 0xea, 0xc9, 0xd6, 0xe3, 0xa0, 0xc1, 0xf2, 0x63, 0x18, 0x55, 0x58, 0x9d,
+	0xa6, 0x05, 0xde, 0x87, 0x9d, 0x4c, 0xbc, 0x8d, 0x53, 0x51, 0x35, 0x3a, 0xe2, 0x5f, 0xc1, 0xe8,
+	0xa7, 0x3c, 0x2a, 0xe5, 0x96, 0xc9, 0x2c, 0xbc, 0x47, 0xf8, 0xa7, 0x10, 0x6a, 0xbc, 0x4e, 0x88,
+	0x88, 0xa2, 0x14, 0xe5, 0x6d, 0x41, 0x11, 0x02, 0x3e, 0x87, 0xd1, 0x0f, 0x37, 0xb8, 0x64, 0x75,
+	0x82, 0x07, 0x2f, 0xda, 0xe7, 0x10, 0xea, 0x40, 0x3a, 0x93, 0x1b, 0xa9, 0x46, 0xf6, 0xbb, 0xc8,
+	0xef, 0x20, 0x7c, 0x99, 0x4b, 0xd1, 0x34, 0xf9, 0xe0, 0x1a, 0xbe, 0x80, 0x71, 0x1d, 0xe9, 0xbe,
+	0x45, 0x7c, 0x0c, 0xe1, 0xb9, 0x5c, 0xa5, 0x77, 0xdb, 0x15, 0xc1, 0x8f, 0x60, 0x5c, 0xbb, 0x6f,
+	0x18, 0x2c, 0x06, 0x7c, 0x9d, 0xa6, 0x37, 0xb7, 0xd9, 0x76, 0x01, 0xb1, 0xf4, 0xda, 0xfd, 0xbe,
+	0xa5, 0x73, 0x78, 0x4f, 0xed, 0x14, 0xce, 0xfe, 0x34, 0x8e, 0x37, 0x6c, 0xf8, 0x2f, 0xc0, 0x6c,
+	0x1f, 0x9d, 0xe2, 0x19, 0x40, 0xc5, 0x2f, 0x79, 0x24, 0x55, 0xdd, 0x1e, 0x86, 0x0e, 0x75, 0x68,
+	0x4d, 0x3c, 0x1c, 0x86, 0xaf, 0xa2, 0x58, 0xd6, 0x3e, 0xfd, 0x35, 0x3e, 0xfc, 0x67, 0x7c, 0xc9,
+	0x6f, 0x57, 0x71, 0x94, 0xdc, 0x6c, 0xf7, 0x05, 0xd1, 0x2e, 0x45, 0x7e, 0x8d, 0x5b, 0xeb, 0xd1,
+	0xbd, 0xe6, 0x08, 0xdf, 0xe6, 0x88, 0x80, 0xde, 0xf9, 0xf7, 0xf8, 0xce, 0xeb, 0xc8, 0x6b, 0xc7,
+	0x72, 0x8f, 0xe5, 0x58, 0xd8, 0xcd, 0xbe, 0xab, 0xd6, 0x8f, 0x60, 0x5f, 0xcd, 0xd5, 0xee, 0xbd,
+	0x35, 0x79, 0x0e, 0x93, 0xc6, 0xa3, 0xd9, 0x15, 0x3d, 0x00, 0xea, 0x82, 0x9f, 0x11, 0xff, 0xbc,
+	0x11, 0x1b, 0x19, 0xca, 0x74, 0xdd, 0xa7, 0xae, 0x6d, 0x4e, 0x09, 0xd9, 0x04, 0x76, 0xb3, 0xb4,
+	0x88, 0xca, 0x28, 0x4d, 0xaa, 0x19, 0xf2, 0x67, 0x30, 0x69, 0xe2, 0x35, 0x4c, 0xf3, 0xc6, 0x30,
+	0xda, 0x88, 0xff, 0x4a, 0x0c, 0xba, 0x7d, 0x4a, 0x03, 0x27, 0x5e, 0xe9, 0xe6, 0x54, 0x0e, 0xcb,
+	0x58, 0x5c, 0x17, 0xfa, 0xcb, 0x31, 0x98, 0x2c, 0x5a, 0x25, 0xa0, 0x9c, 0x4d, 0x5e, 0x47, 0xc5,
+	0xff, 0x25, 0xa5, 0xce, 0xfa, 0x9d, 0xce, 0xa8, 0x57, 0xb5, 0xeb, 0x56, 0x88, 0xf5, 0xad, 0x3d,
+	0x57, 0xbb, 0xae, 0xde, 0xe6, 0xd6, 0xdd, 0xa1, 0xfe, 0x3e, 0x76, 0x20, 0xba, 0xe0, 0x1f, 0x15,
+	0x29, 0x28, 0xb7, 0x3a, 0x48, 0xb3, 0x6e, 0x86, 0x7f, 0x13, 0xf9, 0x07, 0xee, 0x82, 0x5e, 0x3f,
+	0xe4, 0xdf, 0x34, 0xbe, 0x3a, 0x13, 0x5a, 0x48, 0xf7, 0xd4, 0x01, 0x3a, 0xd0, 0x81, 0x4f, 0x99,
+	0x26, 0x8a, 0x38, 0xaa, 0x90, 0x3a, 0xc9, 0x3e, 0x84, 0x0b, 0x24, 0x8e, 0x65, 0xa1, 0x93, 0xf0,
+	0xbf, 0x7b, 0xf8, 0x9e, 0xf4, 0x49, 0xb3, 0x30, 0x17, 0x71, 0x7a, 0x79, 0x53, 0x34, 0xea, 0x7d,
+	0xb1, 0xcc, 0xa5, 0x6c, 0x1e, 0xd4, 0x85, 0xb8, 0x13, 0x51, 0x4c, 0x59, 0xe9, 0x7a, 0x89, 0x9b,
+	0x5b, 0x50, 0xce, 0xca, 0x24, 0xef, 0xc0, 0x80, 0x69, 0xc8, 0x95, 0x7c, 0xab, 0x12, 0xb1, 0x9e,
+	0x58, 0x26, 0x24, 0xe0, 0xa1, 0x8a, 0xb6, 0xcc, 0x8d, 0x84, 0x87, 0x2f, 0xfe, 0xda, 0x05, 0xef,
+	0x34, 0x8b, 0xd8, 0x09, 0xec, 0x68, 0xd1, 0x65, 0x07, 0xfa, 0x15, 0xb8, 0x02, 0x3e, 0x7b, 0xd2,
+	0x3e, 0xd6, 0x2d, 0x3e, 0x52, 0xd8, 0x79, 0x0b, 0x3b, 0x5f, 0x8f, 0x9d, 0x77, 0xb0, 0xcf, 0xc1,
+	0x57, 0x2f, 0x88, 0x31, 0xed, 0x61, 0x89, 0xef, 0xec, 0xb1, 0x73, 0x66, 0x20, 0x9f, 0x42, 0x40,
+	0xb2, 0xc7, 0xea, 0x7b, 0x5b, 0x44, 0x67, 0xef, 0xbb, 0x87, 0x36, 0x8a, 0x24, 0xcc, 0xa0, 0x6c,
+	0x65, 0x34, 0x28, 0x47, 0xe5, 0x10, 0xf5, 0x19, 0x0c, 0x2a, 0xd1, 0x61, 0xb5, 0x87, 0xa3, 0x66,
+	0xb3, 0x83, 0xd6, 0xa9, 0x0d, 0xac, 0x96, 0xce, 0x00, 0x1d, 0x05, 0x32, 0x40, 0x57, 0x68, 0x2a,
+	0x60, 0xa5, 0x15, 0x06, 0xe8, 0x28, 0x8d, 0x01, 0xba, 0x82, 0x82, 0xc0, 0x97, 0x00, 0x8d, 0x0a,
+	0xb0, 0xa9, 0x35, 0x3b, 0x47, 0x3c, 0x66, 0x87, 0x6b, 0x6e, 0xec, 0x4f, 0xa9, 0x39, 0xb9, 0x59,
+	0x03, 0x87, 0xfd, 0x9b, 0x35, 0x70, 0xa9, 0x1b, 0xb1, 0x5f, 0xc2, 0x6e, 0x4d, 0x86, 0xec, 0x89,
+	0x95, 0xc4, 0x46, 0x7f, 0xd0, 0x39, 0xb7, 0xe1, 0x35, 0xaf, 0x31, 0x6b, 0x5f, 0xec, 0x77, 0x6e,
+	0xe0, 0x6d, 0x02, 0xac, 0xe0, 0x8b, 0x36, 0x7c, 0xb1, 0x01, 0xbe, 0xe8, 0xc2, 0xbf, 0x86, 0x3d,
+	0xc3, 0x3d, 0xac, 0xf6, 0x6b, 0x13, 0xda, 0x6c, 0xda, 0xbd, 0x30, 0x11, 0x5e, 0xa9, 0xff, 0x1c,
+	0x0d, 0xcd, 0xb0, 0x43, 0xe7, 0x03, 0x3b, 0x51, 0x66, 0xeb, 0xae, 0xdc, 0xcd, 0x51, 0x8f, 0xd6,
+	0xda, 0x1c, 0x8b, 0xa6, 0xac, 0xcd, 0x71, 0x98, 0x86, 0x80, 0x15, 0xb3, 0x18, 0xa0, 0x43, 0x3d,
+	0x06, 0xe8, 0xd2, 0x0f, 0x7f, 0x74, 0x31, 0xa0, 0xf3, 0x4f, 0xfe, 0x0d, 0x00, 0x00, 0xff, 0xff,
+	0x6a, 0x9b, 0xea, 0x5d, 0xc0, 0x0c, 0x00, 0x00,
 }
