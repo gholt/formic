@@ -17,11 +17,12 @@ import (
 )
 
 var (
-	tls      = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
-	certFile = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
-	keyFile  = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
-	port     = flag.Int("port", 9443, "The server port")
-	oortHost = flag.String("oorthost", "127.0.0.1:6379", "host:port to use when connecting to oort")
+	usetls             = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
+	certFile           = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
+	keyFile            = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
+	port               = flag.Int("port", 9443, "The server port")
+	oortHost           = flag.String("oorthost", "127.0.0.1:6379", "host:port to use when connecting to oort")
+	insecureSkipVerify = flag.Bool("skipverify", true, "don't verify cert")
 )
 
 // FatalIf is just a lazy log/panic on error func
@@ -36,7 +37,7 @@ func main() {
 
 	envtls := os.Getenv("FORMICD_TLS")
 	if envtls == "true" {
-		*tls = true
+		*usetls = true
 	}
 
 	envoorthost := os.Getenv("FORMICD_OORT_HOST")
@@ -68,14 +69,17 @@ func main() {
 	FatalIf(err, "Failed to bind to port")
 
 	var opts []grpc.ServerOption
-	if *tls {
+	if *usetls {
 		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
 		FatalIf(err, "Couldn't load cert from file")
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
-
 	s := grpc.NewServer(opts...)
-	pb.RegisterApiServer(s, NewApiServer(NewInMemDS(), NewOortFS(*oortHost)))
+	fs, err := NewOortFS(*oortHost, *insecureSkipVerify)
+	if err != nil {
+		grpclog.Fatalln(err)
+	}
+	pb.RegisterApiServer(s, NewApiServer(NewInMemDS(), fs))
 	grpclog.Printf("Starting up on %d...\n", *port)
 	s.Serve(l)
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/creiht/formic/flother"
 	pb "github.com/creiht/formic/proto"
-	"github.com/garyburd/redigo/redis"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/net/context"
 )
@@ -108,11 +107,6 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 		chunk, err := s.fs.GetChunk(id)
 		log.Printf("LEN: %d", len(chunk))
 		if err != nil {
-			if err == redis.ErrNil {
-				// TODO: Handle failures to get block better
-				log.Printf("Err: Failed to read block")
-				return &pb.ReadResponse{}, nil
-			}
 			log.Print("Err: Failed to read block: ", err)
 			return &pb.ReadResponse{}, err
 		}
