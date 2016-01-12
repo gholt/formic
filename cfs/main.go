@@ -128,7 +128,7 @@ func getArgs(args []string) map[string]string {
 	// Setup declarations
 	var optList []string
 	requiredOptions := []string{"host"}
-	commands := make(map[string]string)
+	clargs := make(map[string]string)
 
 	// Not the correct number of arguments or -help
 	if len(args) != 4 {
@@ -146,12 +146,17 @@ func getArgs(args []string) map[string]string {
 	if args[2] == "-o" || args[2] == "--o" {
 		optList = strings.Split(args[3], ",")
 		for _, item := range optList {
-			value := strings.Split(item, "=")
-			if value[0] == "" || value[1] == "" {
-				printUsage()
-				log.Fatalf("Invalid option %s, %s no value\n\n", value[0], value[1])
+			if strings.Contains(item, "=") {
+				value := strings.Split(item, "=")
+				if value[0] == "" || value[1] == "" {
+					printUsage()
+					log.Fatalf("Invalid option %s, %s no value\n\n", value[0], value[1])
+				} else {
+					clargs[value[0]] = value[1]
+				}
+			} else {
+				clargs[item] = ""
 			}
-			commands[value[0]] = value[1]
 		}
 	} else {
 		printUsage()
@@ -160,7 +165,7 @@ func getArgs(args []string) map[string]string {
 
 	// Verify required options exist
 	for _, v := range requiredOptions {
-		_, ok := commands[v]
+		_, ok := clargs[v]
 		if !ok {
 			printUsage()
 			log.Fatalf("%s is a required option", v)
@@ -168,9 +173,9 @@ func getArgs(args []string) map[string]string {
 	}
 
 	// load in device and mountPoint
-	commands["cfsDevice"] = args[0]
-	commands["mountPoint"] = args[1]
-	return commands
+	clargs["cfsDevice"] = args[0]
+	clargs["mountPoint"] = args[1]
+	return clargs
 }
 
 // printUsage will display usage
