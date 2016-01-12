@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -14,14 +15,16 @@ import (
 )
 
 type fs struct {
-	conn *fuse.Conn
-	rpc  *rpc
+	conn    *fuse.Conn
+	rpc     *rpc
+	handles *fileHandles
 }
 
 func newfs(c *fuse.Conn, r *rpc) *fs {
 	fs := &fs{
-		conn: c,
-		rpc:  r,
+		conn:    c,
+		rpc:     r,
+		handles: newFileHandles(),
 	}
 	return fs
 }
@@ -118,16 +121,64 @@ func (f *fs) handle(r fuse.Request) {
 	}
 }
 
-func recvAttr(src *pb.Attr, dest *fuse.Attr) {
-	dest.Inode = src.Inode
-	dest.Mode = os.FileMode(src.Mode)
-	dest.Size = src.Size
-	dest.Mtime = time.Unix(src.Mtime, 0)
-	dest.Atime = time.Unix(src.Atime, 0)
-	dest.Ctime = time.Unix(src.Ctime, 0)
-	dest.Crtime = time.Unix(src.Crtime, 0)
-	dest.Uid = src.Uid
-	dest.Gid = src.Gid
+type fileHandle struct {
+	inode     fuse.NodeID
+	readCache []byte
+}
+
+type fileHandles struct {
+	cur     fuse.HandleID
+	handles map[fuse.HandleID]*fileHandle
+	sync.RWMutex
+}
+
+func newFileHandles() *fileHandles {
+	return &fileHandles{
+		cur:     0,
+		handles: make(map[fuse.HandleID]*fileHandle),
+	}
+}
+
+func (f *fileHandles) newFileHandle(inode fuse.NodeID) fuse.HandleID {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: not likely that you would use all uint64 handles, but should be better than this
+	f.handles[f.cur] = &fileHandle{inode: inode}
+	f.cur += 1
+	return f.cur - 1
+}
+
+func (f *fileHandles) removeFileHandle(h fuse.HandleID) {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: Need to add error handling
+	delete(f.handles, h)
+}
+
+func (f *fileHandles) cacheRead(h fuse.HandleID, data []byte) {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: Need to add error handling
+	f.handles[h].readCache = data
+}
+
+func (f *fileHandles) getReadCache(h fuse.HandleID) []byte {
+	f.RLock()
+	defer f.RUnlock()
+	// TODO: Need to add error handling
+	return f.handles[h].readCache
+}
+
+func copyAttr(dst *fuse.Attr, src *pb.Attr) {
+	dst.Inode = src.Inode
+	dst.Mode = os.FileMode(src.Mode)
+	dst.Size = src.Size
+	dst.Mtime = time.Unix(src.Mtime, 0)
+	dst.Atime = time.Unix(src.Atime, 0)
+	dst.Ctime = time.Unix(src.Ctime, 0)
+	dst.Crtime = time.Unix(src.Crtime, 0)
+	dst.Uid = src.Uid
+	dst.Gid = src.Gid
 }
 
 func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
@@ -136,12 +187,11 @@ func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 	resp := &fuse.GetattrResponse{}
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	a, err := f.rpc.api.GetAttr(rctx, &pb.Node{Inode: uint64(r.Node)})
-	log.Println(a.Inode)
+	a, err := f.rpc.api.GetAttr(rctx, &pb.GetAttrRequest{Inode: uint64(r.Node)})
 	if err != nil {
 		log.Fatalf("GetAttr fail: %v", err)
 	}
-	recvAttr(a, &resp.Attr)
+	copyAttr(&resp.Attr, a.Attr)
 
 	log.Println(resp)
 	r.Respond(resp)
@@ -166,7 +216,7 @@ func (f *fs) handleLookup(r *fuse.LookupRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(l.Attr.Inode)
-	recvAttr(l.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, l.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -179,7 +229,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 	resp := &fuse.MkdirResponse{}
 
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	m, err := f.rpc.api.MkDir(rctx, &pb.DirEnt{Name: r.Name, Parent: uint64(r.Node)})
+	m, err := f.rpc.api.MkDir(rctx, &pb.MkDirRequest{Name: r.Name, Parent: uint64(r.Node), Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
 	if err != nil {
 		log.Fatalf("Mkdir failed(%s): %v", r.Name, err)
 	}
@@ -190,7 +240,7 @@ func (f *fs) handleMkdir(r *fuse.MkdirRequest) {
 		return
 	}
 	resp.Node = fuse.NodeID(m.Attr.Inode)
-	recvAttr(m.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, m.Attr)
 	resp.EntryValid = 5 * time.Second
 
 	log.Println(resp)
@@ -201,9 +251,8 @@ func (f *fs) handleOpen(r *fuse.OpenRequest) {
 	log.Println("Inside handleOpen")
 	log.Println(r)
 	resp := &fuse.OpenResponse{}
-	// TODO: Figure out what to do for file handles
 	// For now use the inode as the file handle
-	resp.Handle = fuse.HandleID(r.Node)
+	resp.Handle = f.handles.newFileHandle(r.Node)
 	log.Println(resp)
 	r.Respond(resp)
 }
@@ -211,41 +260,43 @@ func (f *fs) handleOpen(r *fuse.OpenRequest) {
 func (f *fs) handleRead(r *fuse.ReadRequest) {
 	log.Println("Inside handleRead")
 	log.Println(r)
-	resp := &fuse.ReadResponse{Data: make([]byte, 0, r.Size)}
+	resp := &fuse.ReadResponse{Data: make([]byte, r.Size)}
 	if r.Dir {
 		// handle directory listing
-		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		data := f.handles.getReadCache(r.Handle)
+		if data == nil {
+			rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-		d, err := f.rpc.api.ReadDirAll(rctx, &pb.Node{Inode: uint64(r.Node)})
-		if err != nil {
-			log.Fatalf("Read on dir failed: %v", err)
-		}
-		log.Println(d.DirEntries)
-		var data []byte
-		data = fuse.AppendDirent(data, fuse.Dirent{
-			Name:  ".",
-			Inode: uint64(r.Node),
-			Type:  fuse.DT_Dir,
-		})
-		data = fuse.AppendDirent(data, fuse.Dirent{
-			Name: "..",
-			Type: fuse.DT_Dir,
-		})
-		for _, de := range d.DirEntries {
-			log.Println(de)
+			d, err := f.rpc.api.ReadDirAll(rctx, &pb.ReadDirAllRequest{Inode: uint64(r.Node)})
+			if err != nil {
+				log.Fatalf("Read on dir failed: %v", err)
+			}
 			data = fuse.AppendDirent(data, fuse.Dirent{
-				Name:  de.Name,
-				Inode: de.Attr.Inode,
+				Name:  ".",
+				Inode: uint64(r.Node),
 				Type:  fuse.DT_Dir,
 			})
-		}
-		for _, fe := range d.FileEntries {
-			log.Println(fe)
 			data = fuse.AppendDirent(data, fuse.Dirent{
-				Name:  fe.Name,
-				Inode: fe.Attr.Inode,
-				Type:  fuse.DT_File,
+				Name: "..",
+				Type: fuse.DT_Dir,
 			})
+			for _, de := range d.DirEntries {
+				log.Println(de)
+				data = fuse.AppendDirent(data, fuse.Dirent{
+					Name:  de.Name,
+					Inode: de.Attr.Inode,
+					Type:  fuse.DT_Dir,
+				})
+			}
+			for _, fe := range d.FileEntries {
+				log.Println(fe)
+				data = fuse.AppendDirent(data, fuse.Dirent{
+					Name:  fe.Name,
+					Inode: fe.Attr.Inode,
+					Type:  fuse.DT_File,
+				})
+			}
+			f.handles.cacheRead(r.Handle, data)
 		}
 		fuseutil.HandleRead(r, resp, data)
 		r.Respond(resp)
@@ -253,11 +304,15 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 	} else {
 		// handle file read
 		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		data, err := f.rpc.api.Read(rctx, &pb.Node{Inode: uint64(r.Node)})
+		data, err := f.rpc.api.Read(rctx, &pb.ReadRequest{
+			Inode:  uint64(r.Node),
+			Offset: int64(r.Offset),
+			Size:   int64(r.Size),
+		})
 		if err != nil {
 			log.Fatal("Read on file failed: ", err)
 		}
-		fuseutil.HandleRead(r, resp, data.Payload)
+		copy(resp.Data, data.Payload)
 		r.Respond(resp)
 	}
 }
@@ -265,11 +320,12 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 func (f *fs) handleWrite(r *fuse.WriteRequest) {
 	log.Println("Inside handleWrite")
 	log.Printf("Writing %d bytes at offset %d", len(r.Data), r.Offset)
+	log.Println(r)
 	// TODO: Implement write
 	// Currently this is stupid simple and doesn't handle all the possibilities
 	resp := &fuse.WriteResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	w, err := f.rpc.api.Write(rctx, &pb.FileChunk{Inode: uint64(r.Node), Offset: r.Offset, Payload: r.Data})
+	w, err := f.rpc.api.Write(rctx, &pb.WriteRequest{Inode: uint64(r.Node), Offset: r.Offset, Payload: r.Data})
 	if err != nil {
 		log.Fatalf("Write to file failed: %v", err)
 	}
@@ -282,17 +338,17 @@ func (f *fs) handleWrite(r *fuse.WriteRequest) {
 
 func (f *fs) handleCreate(r *fuse.CreateRequest) {
 	log.Println("Inside handleCreate")
-
+	log.Println(r)
 	resp := &fuse.CreateResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	c, err := f.rpc.api.Create(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name})
+	c, err := f.rpc.api.Create(rctx, &pb.CreateRequest{Parent: uint64(r.Node), Name: r.Name, Attr: &pb.Attr{Uid: r.Uid, Gid: r.Gid, Mode: uint32(r.Mode)}})
 	if err != nil {
 		log.Fatalf("Failed to create file: %v", err)
 	}
 	resp.Node = fuse.NodeID(c.Attr.Inode)
-	recvAttr(c.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, c.Attr)
 	resp.EntryValid = 5 * time.Second
-	recvAttr(c.Attr, &resp.LookupResponse.Attr)
+	copyAttr(&resp.LookupResponse.Attr, c.Attr)
 	resp.LookupResponse.EntryValid = 5 * time.Second
 	r.Respond(resp)
 }
@@ -302,21 +358,14 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	log.Println(r)
 	resp := &fuse.SetattrResponse{}
 	resp.Attr.Inode = uint64(r.Node)
-	a := &pb.SetAttrRequest{
+	a := &pb.Attr{
 		Inode: uint64(r.Node),
-		Mode:  uint32(r.Mode),
-		Size:  r.Size,
-		Mtime: r.Mtime.Unix(),
-		Uid:   r.Uid,
-		Gid:   r.Gid,
 	}
 	if r.Valid.Size() {
 		resp.Attr.Size = r.Size
-		a.SetSize = true
 	}
 	if r.Valid.Mode() {
 		resp.Attr.Mode = r.Mode
-		a.SetMode = true
 	}
 	if r.Valid.Atime() {
 		resp.Attr.Atime = r.Atime
@@ -326,22 +375,19 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 	}
 	if r.Valid.Mtime() {
 		resp.Attr.Mtime = r.Mtime
-		a.SetMtime = true
 	}
 	if r.Valid.Uid() {
 		resp.Attr.Uid = r.Uid
-		a.SetUid = true
 	}
 	if r.Valid.Gid() {
 		resp.Attr.Gid = r.Gid
-		a.SetGid = true
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	attr, err := f.rpc.api.SetAttr(rctx, a)
+	setAttrResp, err := f.rpc.api.SetAttr(rctx, &pb.SetAttrRequest{Attr: a, Valid: uint32(r.Valid)})
 	if err != nil {
 		log.Fatalf("Setattr failed: %v", err)
 	}
-	recvAttr(attr, &resp.Attr)
+	copyAttr(&resp.Attr, setAttrResp.Attr)
 	log.Println(resp)
 	r.Respond(resp)
 }
@@ -353,6 +399,7 @@ func (f *fs) handleFlush(r *fuse.FlushRequest) {
 
 func (f *fs) handleRelease(r *fuse.ReleaseRequest) {
 	log.Println("Inside handleRelease")
+	f.handles.removeFileHandle(r.Handle)
 	r.Respond()
 }
 
@@ -373,7 +420,7 @@ func (f *fs) handleRemove(r *fuse.RemoveRequest) {
 	log.Println("Inside handleRemove")
 	log.Println(r)
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := f.rpc.api.Remove(rctx, &pb.DirEnt{Parent: uint64(r.Node), Name: r.Name})
+	_, err := f.rpc.api.Remove(rctx, &pb.RemoveRequest{Parent: uint64(r.Node), Name: r.Name})
 	if err != nil {
 		log.Fatalf("Failed to delete file: %v", err)
 	}
@@ -426,12 +473,12 @@ func (f *fs) handleSymlink(r *fuse.SymlinkRequest) {
 	log.Println(r)
 	resp := &fuse.SymlinkResponse{}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	symlink, err := f.rpc.api.Symlink(rctx, &pb.SymlinkRequest{Parent: uint64(r.Node), Name: r.NewName, Target: r.Target})
+	symlink, err := f.rpc.api.Symlink(rctx, &pb.SymlinkRequest{Parent: uint64(r.Node), Name: r.NewName, Target: r.Target, Uid: r.Uid, Gid: r.Gid})
 	if err != nil {
 		log.Fatalf("Symlink failed: %v", err)
 	}
 	resp.Node = fuse.NodeID(symlink.Attr.Inode)
-	recvAttr(symlink.Attr, &resp.Attr)
+	copyAttr(&resp.Attr, symlink.Attr)
 	resp.EntryValid = 5 * time.Second
 	log.Println(resp)
 	r.Respond(resp)
@@ -441,7 +488,7 @@ func (f *fs) handleReadlink(r *fuse.ReadlinkRequest) {
 	log.Println("Inside handleReadlink")
 	log.Println(r)
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	resp, err := f.rpc.api.Readlink(rctx, &pb.Node{Inode: uint64(r.Node)})
+	resp, err := f.rpc.api.Readlink(rctx, &pb.ReadlinkRequest{Inode: uint64(r.Node)})
 	if err != nil {
 		log.Fatalf("Readlink failed: %v", err)
 	}
