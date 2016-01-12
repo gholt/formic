@@ -73,6 +73,7 @@ func (NullWriter) Write([]byte) (int, error) { return 0, nil }
 
 func main() {
 
+	fusermountPath()
 	flag.Usage = printUsage
 	flag.Parse()
 	clargs := getArgs(flag.Args())
@@ -176,6 +177,16 @@ func getArgs(args []string) map[string]string {
 	clargs["cfsDevice"] = args[0]
 	clargs["mountPoint"] = args[1]
 	return clargs
+}
+
+func fusermountPath() {
+	// Grab the current path
+	currentPath := os.Getenv("PATH")
+	if len(currentPath) == 0 {
+		// using mount seem to not have a path
+		// fusermount is in /bin
+		os.Setenv("PATH", "/bin")
+	}
 }
 
 // printUsage will display usage
