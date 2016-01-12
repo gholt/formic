@@ -200,7 +200,6 @@ func (s *apiServer) ReadDirAll(ctx context.Context, n *pb.ReadDirAllRequest) (*p
 }
 
 func (s *apiServer) Remove(ctx context.Context, r *pb.RemoveRequest) (*pb.RemoveResponse, error) {
-	// TODO: Add calls to remove from backing store
 	status, err := s.ds.Remove(r.Parent, r.Name)
 	return &pb.RemoveResponse{Status: status}, err
 }

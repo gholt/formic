@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -14,14 +15,16 @@ import (
 )
 
 type fs struct {
-	conn *fuse.Conn
-	rpc  *rpc
+	conn    *fuse.Conn
+	rpc     *rpc
+	handles *fileHandles
 }
 
 func newfs(c *fuse.Conn, r *rpc) *fs {
 	fs := &fs{
-		conn: c,
-		rpc:  r,
+		conn:    c,
+		rpc:     r,
+		handles: newFileHandles(),
 	}
 	return fs
 }
@@ -118,6 +121,54 @@ func (f *fs) handle(r fuse.Request) {
 	}
 }
 
+type fileHandle struct {
+	inode     fuse.NodeID
+	readCache []byte
+}
+
+type fileHandles struct {
+	cur     fuse.HandleID
+	handles map[fuse.HandleID]*fileHandle
+	sync.RWMutex
+}
+
+func newFileHandles() *fileHandles {
+	return &fileHandles{
+		cur:     0,
+		handles: make(map[fuse.HandleID]*fileHandle),
+	}
+}
+
+func (f *fileHandles) newFileHandle(inode fuse.NodeID) fuse.HandleID {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: not likely that you would use all uint64 handles, but should be better than this
+	f.handles[f.cur] = &fileHandle{inode: inode}
+	f.cur += 1
+	return f.cur - 1
+}
+
+func (f *fileHandles) removeFileHandle(h fuse.HandleID) {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: Need to add error handling
+	delete(f.handles, h)
+}
+
+func (f *fileHandles) cacheRead(h fuse.HandleID, data []byte) {
+	f.Lock()
+	defer f.Unlock()
+	// TODO: Need to add error handling
+	f.handles[h].readCache = data
+}
+
+func (f *fileHandles) getReadCache(h fuse.HandleID) []byte {
+	f.RLock()
+	defer f.RUnlock()
+	// TODO: Need to add error handling
+	return f.handles[h].readCache
+}
+
 func copyAttr(dst *fuse.Attr, src *pb.Attr) {
 	dst.Inode = src.Inode
 	dst.Mode = os.FileMode(src.Mode)
@@ -200,9 +251,8 @@ func (f *fs) handleOpen(r *fuse.OpenRequest) {
 	log.Println("Inside handleOpen")
 	log.Println(r)
 	resp := &fuse.OpenResponse{}
-	// TODO: Figure out what to do for file handles
 	// For now use the inode as the file handle
-	resp.Handle = fuse.HandleID(r.Node)
+	resp.Handle = f.handles.newFileHandle(r.Node)
 	log.Println(resp)
 	r.Respond(resp)
 }
@@ -213,37 +263,40 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 	resp := &fuse.ReadResponse{Data: make([]byte, r.Size)}
 	if r.Dir {
 		// handle directory listing
-		rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		data := f.handles.getReadCache(r.Handle)
+		if data == nil {
+			rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-		d, err := f.rpc.api.ReadDirAll(rctx, &pb.ReadDirAllRequest{Inode: uint64(r.Node)})
-		if err != nil {
-			log.Fatalf("Read on dir failed: %v", err)
-		}
-		var data []byte
-		data = fuse.AppendDirent(data, fuse.Dirent{
-			Name:  ".",
-			Inode: uint64(r.Node),
-			Type:  fuse.DT_Dir,
-		})
-		data = fuse.AppendDirent(data, fuse.Dirent{
-			Name: "..",
-			Type: fuse.DT_Dir,
-		})
-		for _, de := range d.DirEntries {
-			log.Println(de)
+			d, err := f.rpc.api.ReadDirAll(rctx, &pb.ReadDirAllRequest{Inode: uint64(r.Node)})
+			if err != nil {
+				log.Fatalf("Read on dir failed: %v", err)
+			}
 			data = fuse.AppendDirent(data, fuse.Dirent{
-				Name:  de.Name,
-				Inode: de.Attr.Inode,
+				Name:  ".",
+				Inode: uint64(r.Node),
 				Type:  fuse.DT_Dir,
 			})
-		}
-		for _, fe := range d.FileEntries {
-			log.Println(fe)
 			data = fuse.AppendDirent(data, fuse.Dirent{
-				Name:  fe.Name,
-				Inode: fe.Attr.Inode,
-				Type:  fuse.DT_File,
+				Name: "..",
+				Type: fuse.DT_Dir,
 			})
+			for _, de := range d.DirEntries {
+				log.Println(de)
+				data = fuse.AppendDirent(data, fuse.Dirent{
+					Name:  de.Name,
+					Inode: de.Attr.Inode,
+					Type:  fuse.DT_Dir,
+				})
+			}
+			for _, fe := range d.FileEntries {
+				log.Println(fe)
+				data = fuse.AppendDirent(data, fuse.Dirent{
+					Name:  fe.Name,
+					Inode: fe.Attr.Inode,
+					Type:  fuse.DT_File,
+				})
+			}
+			f.handles.cacheRead(r.Handle, data)
 		}
 		fuseutil.HandleRead(r, resp, data)
 		r.Respond(resp)
@@ -346,6 +399,7 @@ func (f *fs) handleFlush(r *fuse.FlushRequest) {
 
 func (f *fs) handleRelease(r *fuse.ReleaseRequest) {
 	log.Println("Inside handleRelease")
+	f.handles.removeFileHandle(r.Handle)
 	r.Respond()
 }
 

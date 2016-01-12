@@ -23,16 +23,17 @@ service Api {
     rpc Statfs(StatfsRequest) returns (StatfsResponse) {}
 }
 
-// Node is the file inode
-message Node {
-    uint64 inode = 1;
-}
-
 // DirEnt is a directory entry
 message DirEnt {
     string name   = 1;
     uint64 parent = 2;
     Attr   attr   = 3;
+}
+
+// DirEntries just contains a list of directory entries
+message DirEntries {
+    repeated DirEnt DirEntries  = 1;
+    repeated DirEnt FileEntries = 2;
 }
 
 // Attr
@@ -171,12 +172,6 @@ message SymlinkResponse {
     uint64 parent = 1;
     string name   = 2;
     Attr   attr   = 3;
-}
-
-// DirEntries just contains a list of directory entries
-message DirEntries {
-    repeated DirEnt DirEntries  = 1;
-    repeated DirEnt FileEntries = 2;
 }
 
 // ReadlinkRequest
