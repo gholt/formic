@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	pb "github.com/creiht/formic/proto"
@@ -48,18 +49,6 @@ func (s *server) serve() error {
 	return nil
 }
 
-var (
-	debug              = flag.Bool("debug", false, "enable debug log messages to stderr")
-	serverAddr         = flag.String("host", "127.0.0.1:9443", "The oort api server to connect to")
-	serverHostOverride = flag.String("host_override", "localhost", "")
-)
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "  %s MOUNTPOINT\n", os.Args[0])
-	flag.PrintDefaults()
-}
-
 func debuglog(msg interface{}) {
 	fmt.Fprintf(os.Stderr, "%v\n", msg)
 }
@@ -83,13 +72,12 @@ type NullWriter int
 func (NullWriter) Write([]byte) (int, error) { return 0, nil }
 
 func main() {
-	flag.Usage = usage
-	flag.Parse()
 
-	if flag.NArg() != 1 {
-		usage()
-		os.Exit(2)
-	}
+	flag.Usage = printUsage
+	flag.Parse()
+	clargs := getArgs(flag.Args())
+	mountpoint := clargs["mountPoint"]
+	serverAddr := clargs["host"]
 
 	// Setup grpc
 	var opts []grpc.DialOption
@@ -97,7 +85,7 @@ func main() {
 		InsecureSkipVerify: true,
 	})
 	opts = append(opts, grpc.WithTransportCredentials(creds))
-	conn, err := grpc.Dial(*serverAddr, opts...)
+	conn, err := grpc.Dial(serverAddr, opts...)
 	if err != nil {
 		log.Fatalf("failed to dial: %v", err)
 	}
@@ -106,7 +94,6 @@ func main() {
 	// Uncomment the following to diable logs
 	//log.SetOutput(new(NullWriter))
 
-	mountpoint := flag.Arg(0)
 	c, err := fuse.Mount(
 		mountpoint,
 		fuse.FSName("cfs"),
@@ -133,4 +120,67 @@ func main() {
 	if err := c.MountError; err != nil {
 		log.Fatal(err)
 	}
+}
+
+// getArgs is passed a command line and breaks it up into commands
+// the valid format is <device> <mount point> -o [Options]
+func getArgs(args []string) map[string]string {
+	// Setup declarations
+	var optList []string
+	requiredOptions := []string{"host"}
+	commands := make(map[string]string)
+
+	// Not the correct number of arguments or -help
+	if len(args) != 4 {
+		printUsage()
+		os.Exit(0)
+	}
+
+	// Verify mountPoint exists
+	if _, err := os.Stat(args[1]); os.IsNotExist(err) {
+		printUsage()
+		log.Fatalf("Mount point %s does not exist\n\n", args[1])
+	}
+
+	// process options -o
+	if args[2] == "-o" || args[2] == "--o" {
+		optList = strings.Split(args[3], ",")
+		for _, item := range optList {
+			value := strings.Split(item, "=")
+			if value[0] == "" || value[1] == "" {
+				printUsage()
+				log.Fatalf("Invalid option %s, %s no value\n\n", value[0], value[1])
+			}
+			commands[value[0]] = value[1]
+		}
+	} else {
+		printUsage()
+		log.Fatalf("Invalid option %v\n\n", args[2])
+	}
+
+	// Verify required options exist
+	for _, v := range requiredOptions {
+		_, ok := commands[v]
+		if !ok {
+			printUsage()
+			log.Fatalf("%s is a required option", v)
+		}
+	}
+
+	// load in device and mountPoint
+	commands["cfsDevice"] = args[0]
+	commands["mountPoint"] = args[1]
+	return commands
+}
+
+// printUsage will display usage
+func printUsage() {
+	fmt.Println("Usage:")
+	fmt.Println("\tcfs [file system] [mount point] -o [OPTIONS] -help")
+	fmt.Println("\texample: mount -t cfs fsaas /mnt/cfsdrive -o host=localhost:8445")
+	fmt.Println("\tMount Options: (separated by commas with no spaces)")
+	fmt.Println("\t\tRequired:")
+	fmt.Println("\t\t\thost\taddress of the formic server")
+	fmt.Println("")
+	fmt.Println("\thelp\tdisplay usage")
 }
