@@ -8,9 +8,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
 	"syscall"
 )
 
@@ -26,12 +24,8 @@ func main() {
 	// Parsing command line arguments
 	flag.Parse()
 
-	// Grab the current PATH
-	path, err := exec.LookPath("cfs")
-	if err != nil {
-		log.Fatalf("failed to find the cfs program: %v", err)
-		os.Exit(1)
-	}
+	// Set the path to cfs
+	path := "/root/go/bin/cfs"
 
 	// Working with command line arguments to pass them thru to cfs
 	clargs = append([]string{path}, flag.Args()...)
