@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"log"
 	"os"
 	"sort"
 	"sync"
@@ -161,7 +160,6 @@ func (ds *InMemDS) SetAttr(id []byte, attr *pb.Attr, v uint32) (*pb.Attr, error)
 	valid := fuse.SetattrValid(v)
 	if entry, ok := ds.nodes[murmur3.Sum64(id)]; ok {
 		if valid.Mode() {
-			log.Println("Setting mode ", entry.attr.Mode, attr.Mode)
 			entry.attr.Mode = attr.Mode
 		}
 		if valid.Size() {

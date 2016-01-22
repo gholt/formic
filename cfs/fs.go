@@ -362,25 +362,25 @@ func (f *fs) handleSetattr(r *fuse.SetattrRequest) {
 		Inode: uint64(r.Node),
 	}
 	if r.Valid.Size() {
-		resp.Attr.Size = r.Size
+		a.Size = r.Size
 	}
 	if r.Valid.Mode() {
-		resp.Attr.Mode = r.Mode
+		a.Mode = uint32(r.Mode)
 	}
 	if r.Valid.Atime() {
-		resp.Attr.Atime = r.Atime
+		a.Atime = r.Atime.Unix()
 	}
 	if r.Valid.AtimeNow() {
-		resp.Attr.Atime = time.Now()
+		a.Atime = time.Now().Unix()
 	}
 	if r.Valid.Mtime() {
-		resp.Attr.Mtime = r.Mtime
+		a.Mtime = r.Mtime.Unix()
 	}
 	if r.Valid.Uid() {
-		resp.Attr.Uid = r.Uid
+		a.Uid = r.Uid
 	}
 	if r.Valid.Gid() {
-		resp.Attr.Gid = r.Gid
+		a.Gid = r.Gid
 	}
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	setAttrResp, err := f.rpc.api.SetAttr(rctx, &pb.SetAttrRequest{Attr: a, Valid: uint32(r.Valid)})
