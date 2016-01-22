@@ -18,58 +18,58 @@ func NewTestDS() *TestDS {
 	return &TestDS{}
 }
 
-func (ds *TestDS) GetAttr(inode uint64) (*pb.Attr, error) {
+func (ds *TestDS) GetAttr(id []byte) (*pb.Attr, error) {
 	return &pb.Attr{}, nil
 }
 
-func (ds *TestDS) SetAttr(inode uint64, attr *pb.Attr, valid uint32) (*pb.Attr, error) {
+func (ds *TestDS) SetAttr(id []byte, attr *pb.Attr, valid uint32) (*pb.Attr, error) {
 	return &pb.Attr{}, nil
 }
 
-func (ds *TestDS) Create(parent, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
+func (ds *TestDS) Create(parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
 	return name, attr, nil
 }
 
-func (ds *TestDS) Lookup(parent uint64, name string) (string, *pb.Attr, error) {
+func (ds *TestDS) Lookup(parent []byte, name string) (string, *pb.Attr, error) {
 	return "", &pb.Attr{}, nil
 }
 
-func (ds *TestDS) ReadDirAll(inode uint64) (*pb.ReadDirAllResponse, error) {
+func (ds *TestDS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	return &pb.ReadDirAllResponse{}, nil
 }
 
-func (ds *TestDS) Remove(parent uint64, name string) (int32, error) {
+func (ds *TestDS) Remove(parent []byte, name string) (int32, error) {
 	return 1, nil
 }
 
-func (ds *TestDS) Update(inode, block, blocksize, size uint64, mtime int64) {
+func (ds *TestDS) Update(id []byte, block, blocksize, size uint64, mtime int64) {
 }
 
-func (ds *TestDS) Symlink(parent uint64, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error) {
+func (ds *TestDS) Symlink(parent, id []byte, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error) {
 	return &pb.SymlinkResponse{}, nil
 }
 
-func (ds *TestDS) Readlink(inode uint64) (*pb.ReadlinkResponse, error) {
+func (ds *TestDS) Readlink(id []byte) (*pb.ReadlinkResponse, error) {
 	return &pb.ReadlinkResponse{}, nil
 }
 
-func (ds *TestDS) Getxattr(r *pb.GetxattrRequest) (*pb.GetxattrResponse, error) {
+func (ds *TestDS) Getxattr(id []byte, name string) (*pb.GetxattrResponse, error) {
 	return &pb.GetxattrResponse{}, nil
 }
 
-func (ds *TestDS) Setxattr(r *pb.SetxattrRequest) (*pb.SetxattrResponse, error) {
+func (ds *TestDS) Setxattr(id []byte, name string, value []byte) (*pb.SetxattrResponse, error) {
 	return &pb.SetxattrResponse{}, nil
 }
 
-func (ds *TestDS) Listxattr(r *pb.ListxattrRequest) (*pb.ListxattrResponse, error) {
+func (ds *TestDS) Listxattr(id []byte) (*pb.ListxattrResponse, error) {
 	return &pb.ListxattrResponse{}, nil
 }
 
-func (ds *TestDS) Removexattr(r *pb.RemovexattrRequest) (*pb.RemovexattrResponse, error) {
+func (ds *TestDS) Removexattr(id []byte, name string) (*pb.RemovexattrResponse, error) {
 	return &pb.RemovexattrResponse{}, nil
 }
 
-func (ds *TestDS) Rename(r *pb.RenameRequest) (*pb.RenameResponse, error) {
+func (ds *TestDS) Rename(oldParent, newParent []byte, oldName, newName string) (*pb.RenameResponse, error) {
 	return &pb.RenameResponse{}, nil
 }
 
@@ -110,13 +110,12 @@ func (fs *TestFS) addread(d []byte) {
 }
 
 func TestGetID(t *testing.T) {
-	api := NewApiServer(NewTestDS(), NewTestFS())
-	id1 := api.GetID(uint64(11), uint64(1), uint64(1), uint64(1))
-	id2 := api.GetID(uint64(11), uint64(1), uint64(1), uint64(1))
+	id1 := GetID(uint64(11), uint64(1), uint64(1), uint64(1))
+	id2 := GetID(uint64(11), uint64(1), uint64(1), uint64(1))
 	if !bytes.Equal(id1, id2) {
 		t.Errorf("Generated IDs not equal")
 	}
-	id3 := api.GetID(uint64(11), uint64(1), uint64(1), uint64(2))
+	id3 := GetID(uint64(11), uint64(1), uint64(1), uint64(2))
 	if bytes.Equal(id1, id3) {
 		t.Errorf("Generated IDs were equal")
 	}

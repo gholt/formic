@@ -27,20 +27,20 @@ type OortFS struct {
 	gopts              []grpc.DialOption
 	gcreds             credentials.TransportAuthenticator
 	insecureSkipVerify bool
+	conn               *grpc.ClientConn
+	client             vp.ValueStoreClient
 	sync.RWMutex
-	conn   *grpc.ClientConn
-	client vp.ValueStoreClient
 }
 
-func NewOortFS(addr string, InsecureSkipVerify bool, grpcOpts ...grpc.DialOption) (*OortFS, error) {
+func NewOortFS(addr string, insecureSkipVerify bool, grpcOpts ...grpc.DialOption) (*OortFS, error) {
 	var err error
 	o := &OortFS{
 		addr:  addr,
 		gopts: grpcOpts,
 		gcreds: credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: InsecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify,
 		}),
-		insecureSkipVerify: InsecureSkipVerify,
+		insecureSkipVerify: insecureSkipVerify,
 	}
 	o.gopts = append(o.gopts, grpc.WithTransportCredentials(o.gcreds))
 	o.conn, err = grpc.Dial(o.addr, o.gopts...)

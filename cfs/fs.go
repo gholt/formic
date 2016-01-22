@@ -545,7 +545,7 @@ func (f *fs) handleSetxattr(r *fuse.SetxattrRequest) {
 	req := &pb.SetxattrRequest{
 		Inode:    uint64(r.Node),
 		Name:     r.Name,
-		Xattr:    r.Xattr,
+		Value:    r.Xattr,
 		Position: r.Position,
 		Flags:    r.Flags,
 	}
@@ -580,7 +580,7 @@ func (f *fs) handleRename(r *fuse.RenameRequest) {
 	log.Println("Inside handleRename")
 	log.Println(r)
 	rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := f.rpc.api.Rename(rctx, &pb.RenameRequest{Parent: uint64(r.Node), NewDir: uint64(r.NewDir), OldName: r.OldName, NewName: r.NewName})
+	_, err := f.rpc.api.Rename(rctx, &pb.RenameRequest{OldParent: uint64(r.Node), NewParent: uint64(r.NewDir), OldName: r.OldName, NewName: r.NewName})
 	if err != nil {
 		log.Fatalf("Rename failed: %v", err)
 	}

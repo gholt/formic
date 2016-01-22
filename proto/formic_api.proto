@@ -199,7 +199,7 @@ message GetxattrResponse {
 message SetxattrRequest {
     uint64 inode = 1;
     string name = 2;
-    bytes xattr = 3;
+    bytes value = 3;
     uint32 position = 4;
     uint32 flags = 5;
 }
@@ -224,8 +224,8 @@ message RemovexattrResponse {}
 
 // Rename
 message RenameRequest {
-    uint64 parent  = 1;
-    uint64 newDir  = 2;
+    uint64 oldParent  = 1;
+    uint64 newParent  = 2;
     string oldName = 3;
     string newName = 4;
 }
