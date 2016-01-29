@@ -32,7 +32,7 @@ func main() {
 
 	// The Credential fields are used to set UID, GID and attitional GIDS of the process
 	// You need to run the program as  root to do this
-	var cred = &syscall.Credential{UID, GUID, []uint32{}}
+	var cred = &syscall.Credential{Uid: UID, Gid: GUID, Groups: []uint32{}}
 	// the Noctty flag is used to detach the process from parent tty
 	var sysproc = &syscall.SysProcAttr{Credential: cred, Noctty: true}
 	var attr = os.ProcAttr{
