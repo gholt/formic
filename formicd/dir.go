@@ -225,6 +225,7 @@ func (ds *InMemDS) Lookup(parent []byte, name string) (string, *pb.Attr, error) 
 }
 
 // Needed to be able to sort the dirents
+/*
 type ByDirent []*pb.DirEnt
 
 func (d ByDirent) Len() int {
@@ -238,6 +239,7 @@ func (d ByDirent) Swap(i, j int) {
 func (d ByDirent) Less(i, j int) bool {
 	return d[i].Name < d[j].Name
 }
+*/
 
 func (ds *InMemDS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	ds.RLock()

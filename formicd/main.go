@@ -21,7 +21,8 @@ var (
 	certFile           = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
 	keyFile            = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
 	port               = flag.Int("port", 9443, "The server port")
-	oortHost           = flag.String("oorthost", "127.0.0.1:6379", "host:port to use when connecting to oort")
+	oortValueHost      = flag.String("oortvaluehost", "127.0.0.1:6379", "host:port to use when connecting to oort")
+	oortGroupHost      = flag.String("oortgrouphost", "127.0.0.1:6380", "host:port to use when connecting to oort")
 	insecureSkipVerify = flag.Bool("skipverify", true, "don't verify cert")
 )
 
@@ -40,9 +41,14 @@ func main() {
 		*usetls = true
 	}
 
-	envoorthost := os.Getenv("FORMICD_OORT_HOST")
-	if envoorthost != "" {
-		*oortHost = envoorthost
+	envoortvhost := os.Getenv("FORMICD_OORT_VALUE_HOST")
+	if envoortvhost != "" {
+		*oortValueHost = envoortvhost
+	}
+
+	envoortghost := os.Getenv("FORMICD_OORT_GROUP_HOST")
+	if envoortghost != "" {
+		*oortGroupHost = envoortghost
 	}
 
 	envport := os.Getenv("FORMICD_PORT")
@@ -75,7 +81,7 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	}
 	s := grpc.NewServer(opts...)
-	fs, err := NewOortFS(*oortHost, *insecureSkipVerify)
+	fs, err := NewOortFS(*oortValueHost, *oortGroupHost, *insecureSkipVerify)
 	if err != nil {
 		grpclog.Fatalln(err)
 	}
