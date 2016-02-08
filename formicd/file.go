@@ -24,6 +24,20 @@ import (
 )
 
 type FileService interface {
+	GetAttr(id []byte) (*pb.Attr, error)
+	SetAttr(id []byte, attr *pb.Attr, valid uint32) (*pb.Attr, error)
+	Create(parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error)
+	Update(id []byte, block, size, blocksize uint64, mtime int64) error
+	Lookup(parent []byte, name string) (string, *pb.Attr, error)
+	ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error)
+	Remove(parent []byte, name string) (int32, error)
+	Symlink(parent, id []byte, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error)
+	Readlink(id []byte) (*pb.ReadlinkResponse, error)
+	Getxattr(id []byte, name string) (*pb.GetxattrResponse, error)
+	Setxattr(id []byte, name string, value []byte) (*pb.SetxattrResponse, error)
+	Listxattr(id []byte) (*pb.ListxattrResponse, error)
+	Removexattr(id []byte, name string) (*pb.RemovexattrResponse, error)
+	Rename(oldParent, newParent []byte, oldName, newName string) (*pb.RenameResponse, error)
 	GetChunk(id []byte) ([]byte, error)
 	WriteChunk(id, data []byte) error
 }
@@ -263,6 +277,7 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 	r.NameKeyA, r.NameKeyB = murmur3.Sum128([]byte(name))
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	lres, err := o.gclient.Lookup(ctx, r)
+	log.Println("CREATE: lookup: ", lres)
 	if err != nil {
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
@@ -365,6 +380,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	lres, err := o.gclient.LookupGroup(ctx, r)
 	if err != nil {
 		// TODO: Needs beter error handling
+		log.Println("Error looking up group: ", err)
 		return &pb.ReadDirAllResponse{}, err
 	}
 	// Iterate over each key, getting the ID then the Inode Entry
@@ -380,6 +396,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 		err := stream.Send(lookup)
 		if err != nil {
 			// TODO: Needs beter error handling
+			log.Println("Error with lookup: ", err)
 			continue
 		}
 		res, err := stream.Recv()
@@ -396,6 +413,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 		if err != nil {
 			continue
 		}
+		log.Println("Entry: ", n)
 		if n.IsDir {
 			e.DirEntries = append(e.DirEntries, &pb.DirEnt{Name: n.Path, Attr: n.Attr})
 		} else {
@@ -404,6 +422,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	}
 	sort.Sort(ByDirent(e.DirEntries))
 	sort.Sort(ByDirent(e.FileEntries))
+	log.Println("DIR: ", e)
 	return e, nil
 }
 
