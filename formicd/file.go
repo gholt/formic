@@ -164,7 +164,8 @@ func (o *OortFS) GetGroupWriteStream(ctx context.Context, opts ...grpc.CallOptio
 	return o.gclient.StreamWrite(ctx)
 }
 
-func (o *OortFS) GetChunk(id []byte) ([]byte, error) {
+// Helper methods to get data from value and group store
+func (o *OortFS) readValue(id []byte) ([]byte, error) {
 	stream, err := o.GetValueReadStream(context.Background())
 	defer stream.CloseSend()
 	if err != nil {
@@ -185,7 +186,7 @@ func (o *OortFS) GetChunk(id []byte) ([]byte, error) {
 	return res.Value, nil
 }
 
-func (o *OortFS) WriteChunk(id, data []byte) error {
+func (o *OortFS) writeValue(id, data []byte) error {
 	stream, err := o.GetValueWriteStream(context.Background())
 	defer stream.CloseSend()
 	if err != nil {
@@ -210,6 +211,112 @@ func (o *OortFS) WriteChunk(id, data []byte) error {
 		return ErrStoreHasNewerValue
 	}
 	return nil
+}
+
+func (o *OortFS) deleteValue(id []byte) error {
+	r := &vp.DeleteRequest{}
+	r.KeyA, r.KeyB = murmur3.Sum128(id)
+	r.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	_, err := o.vclient.Delete(ctx, r)
+	return err
+}
+
+func (o *OortFS) writeGroup(key, nameKey, value []byte) error {
+	stream, err := o.GetGroupWriteStream(context.Background())
+	defer stream.CloseSend()
+	if err != nil {
+		return err
+	}
+	w := &gp.WriteRequest{}
+	w.KeyA, w.KeyB = murmur3.Sum128(key)
+	w.NameKeyA, w.NameKeyB = murmur3.Sum128(nameKey)
+	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	w.Value = value
+	if err := stream.Send(w); err != nil {
+		return err
+	}
+	wres, err := stream.Recv()
+	if err != io.EOF && err != nil {
+		return err
+	}
+	if wres.Tsm > w.Tsm {
+		return ErrStoreHasNewerValue
+	}
+	return nil
+}
+
+func (o *OortFS) readGroupItem(key, nameKey []byte) ([]byte, error) {
+	nameKeyA, nameKeyB := murmur3.Sum128(nameKey)
+	return o.readGroupItemByKey(key, nameKeyA, nameKeyB)
+}
+
+func (o *OortFS) readGroupItemByKey(key []byte, nameKeyA, nameKeyB uint64) ([]byte, error) {
+	stream, err := o.GetGroupReadStream(context.Background())
+	defer stream.CloseSend()
+	if err != nil {
+		return nil, err
+	}
+	r := &gp.ReadRequest{}
+	r.KeyA, r.KeyB = murmur3.Sum128(key)
+	r.NameKeyA = nameKeyA
+	r.NameKeyB = nameKeyB
+	if err := stream.Send(r); err != nil {
+		return nil, err
+	}
+	res, err := stream.Recv()
+	if err == io.EOF {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return res.Value, nil
+}
+
+func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
+	r := &gp.LookupGroupRequest{}
+	r.A, r.B = murmur3.Sum128(key)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	lres, err := o.gclient.LookupGroup(ctx, r)
+	if err != nil {
+		// TODO: Needs beter error handling
+		return nil, err
+	}
+	return lres.Items, nil
+}
+
+// A faster lookup that is just a check to see if the nameKey exists
+func (o *OortFS) lookupGroup(key, nameKey []byte) (bool, error) {
+	r := &gp.LookupRequest{}
+	r.KeyA, r.KeyB = murmur3.Sum128(key)
+	r.NameKeyA, r.NameKeyB = murmur3.Sum128(nameKey)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	lres, err := o.gclient.Lookup(ctx, r)
+	if err != nil {
+		// TODO: Needs beter error handling
+		return false, err
+	}
+	return lres.Err != "not found", nil
+}
+
+func (o *OortFS) deleteGroup(key, nameKey []byte) error {
+	r := &gp.DeleteRequest{}
+	r.KeyA, r.KeyB = murmur3.Sum128(key)
+	r.NameKeyA, r.NameKeyB = murmur3.Sum128(nameKey)
+	r.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	_, err := o.gclient.Delete(ctx, r)
+	return err
+}
+
+// FileService methods
+func (o *OortFS) GetChunk(id []byte) ([]byte, error) {
+	return o.readValue(id)
+}
+
+func (o *OortFS) WriteChunk(id, data []byte) error {
+	return o.writeValue(id, data)
 }
 
 func (o *OortFS) GetAttr(id []byte) (*pb.Attr, error) {
@@ -272,39 +379,18 @@ func (o *OortFS) SetAttr(id []byte, attr *pb.Attr, v uint32) (*pb.Attr, error) {
 
 func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
 	// Check to see if the name already exists
-	r := &gp.LookupRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(parent)
-	r.NameKeyA, r.NameKeyB = murmur3.Sum128([]byte(name))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.Lookup(ctx, r)
-	log.Println("CREATE: lookup: ", lres)
+	exists, err := o.lookupGroup(parent, []byte(name))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
 	}
-	if lres.Err != "not found" { // TODO: figure out better error passing
+	if exists {
 		return "", &pb.Attr{}, nil
 	}
 	// Add the name to the group
-	stream, err := o.GetGroupWriteStream(context.Background())
-	defer stream.CloseSend()
+	err = o.writeGroup(parent, []byte(name), id)
 	if err != nil {
 		return "", &pb.Attr{}, err
-	}
-	w := &gp.WriteRequest{}
-	w.KeyA, w.KeyB = murmur3.Sum128(parent)
-	w.NameKeyA, w.NameKeyB = murmur3.Sum128([]byte(name))
-	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
-	w.Value = id
-	if err := stream.Send(w); err != nil {
-		return "", &pb.Attr{}, err
-	}
-	wres, err := stream.Recv()
-	if err != io.EOF && err != nil {
-		return "", &pb.Attr{}, err
-	}
-	if wres.Tsm > w.Tsm {
-		return "", &pb.Attr{}, ErrStoreHasNewerValue
 	}
 	// Add the inode entry
 	n := &pb.InodeEntry{
@@ -326,25 +412,13 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 }
 
 func (o *OortFS) Lookup(parent []byte, name string) (string, *pb.Attr, error) {
-	stream, err := o.GetGroupReadStream(context.Background())
-	defer stream.CloseSend()
+	// Get the id
+	id, err := o.readGroupItem(parent, []byte(name))
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
-	r := &gp.ReadRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(parent)
-	r.NameKeyA, r.NameKeyB = murmur3.Sum128([]byte(name))
-	if err := stream.Send(r); err != nil {
-		return "", &pb.Attr{}, err
-	}
-	res, err := stream.Recv()
-	if err == io.EOF {
-		return "", &pb.Attr{}, nil
-	}
-	if err != nil {
-		return "", &pb.Attr{}, err
-	}
-	b, err := o.GetChunk(res.Value)
+	// Get the Inode entry
+	b, err := o.GetChunk(id)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -372,12 +446,9 @@ func (d ByDirent) Less(i, j int) bool {
 }
 
 func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
-
 	// Get the keys from the group
-	r := &gp.LookupGroupRequest{}
-	r.A, r.B = murmur3.Sum128(id)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.LookupGroup(ctx, r)
+	items, err := o.readGroup(id)
+	log.Println("ITEMS: ", items)
 	if err != nil {
 		// TODO: Needs beter error handling
 		log.Println("Error looking up group: ", err)
@@ -389,22 +460,16 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	defer stream.CloseSend()
 	lookup := &gp.ReadRequest{}
 	lookup.KeyA, lookup.KeyB = murmur3.Sum128(id)
-	for _, key := range lres.Items {
+	for _, key := range items {
 		// lookup the key in the group to get the id
-		lookup.NameKeyA = key.NameKeyA
-		lookup.NameKeyB = key.NameKeyB
-		err := stream.Send(lookup)
+		itemId, err := o.readGroupItemByKey(id, key.NameKeyA, key.NameKeyB)
 		if err != nil {
 			// TODO: Needs beter error handling
 			log.Println("Error with lookup: ", err)
 			continue
 		}
-		res, err := stream.Recv()
-		if err != nil {
-			continue
-		}
 		// get the inode entry
-		b, err := o.GetChunk(res.Value)
+		b, err := o.GetChunk(itemId)
 		if err != nil {
 			continue
 		}
@@ -413,7 +478,6 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 		if err != nil {
 			continue
 		}
-		log.Println("Entry: ", n)
 		if n.IsDir {
 			e.DirEntries = append(e.DirEntries, &pb.DirEnt{Name: n.Path, Attr: n.Attr})
 		} else {
@@ -422,58 +486,32 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	}
 	sort.Sort(ByDirent(e.DirEntries))
 	sort.Sort(ByDirent(e.FileEntries))
-	log.Println("DIR: ", e)
 	return e, nil
 }
 
 func (o *OortFS) Remove(parent []byte, name string) (int32, error) {
 	// Check to see if the name exists
-	lr := &gp.LookupRequest{}
-	lr.KeyA, lr.KeyB = murmur3.Sum128(parent)
-	lr.NameKeyA, lr.NameKeyB = murmur3.Sum128([]byte(name))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.Lookup(ctx, lr)
+	exists, err := o.lookupGroup(parent, []byte(name))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return 1, err
 	}
-	if lres.Err != "not found" { // TODO: figure out better error passing
+	if !exists { // TODO: figure out better error passing
 		return 1, nil
 	}
 	// Get the ID from the group list
-	stream, err := o.GetGroupReadStream(context.Background())
-	defer stream.CloseSend()
-	if err != nil {
-		return 1, err
-	}
-	rr := &gp.ReadRequest{}
-	rr.KeyA, rr.KeyB = murmur3.Sum128(parent)
-	rr.NameKeyA, rr.NameKeyB = murmur3.Sum128([]byte(name))
-	if err := stream.Send(rr); err != nil {
-		return 1, err
-	}
-	res, err := stream.Recv()
+	id, err := o.readGroupItem(parent, []byte(name))
 	if err != nil {
 		return 1, err
 	}
 	// Remove the inode
-	tsm := brimtime.TimeToUnixMicro(time.Now())
-	vr := &vp.DeleteRequest{}
-	vr.KeyA, vr.KeyB = murmur3.Sum128(res.Value)
-	vr.Tsm = tsm
-	ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
-	_, err = o.vclient.Delete(ctx, vr)
+	err = o.deleteValue(id)
 	if err != nil {
 		return 1, err
 	}
 	// TODO: More error handling needed
 	// Remove from the group
-	gr := &gp.DeleteRequest{}
-	gr.KeyA = rr.KeyA
-	gr.KeyB = rr.KeyB
-	gr.Tsm = tsm
-	ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
-	_, err = o.gclient.Delete(ctx, gr)
+	err = o.deleteGroup(parent, []byte(name))
 	if err != nil {
 		return 1, err // Not really sure what should be done here to try to recover from err
 	}
@@ -515,17 +553,12 @@ func (o *OortFS) Update(id []byte, block, blocksize, size uint64, mtime int64) e
 
 func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error) {
 	// Check to see if the name exists
-	lr := &gp.LookupRequest{}
-	lr.KeyA, lr.KeyB = murmur3.Sum128(parent)
-	lr.NameKeyA, lr.NameKeyB = murmur3.Sum128([]byte(name))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.Lookup(ctx, lr)
+	exists, err := o.lookupGroup(parent, []byte(name))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return &pb.SymlinkResponse{}, err
 	}
-	if lres.Err != "not found" { // TODO: figure out better error passing
-		// Exists
+	if exists { // TODO: figure out better error passing
 		return &pb.SymlinkResponse{}, nil
 	}
 	n := &pb.InodeEntry{
@@ -545,25 +578,9 @@ func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb
 		return &pb.SymlinkResponse{}, err
 	}
 	// Add the name to the group
-	stream, err := o.GetGroupWriteStream(context.Background())
-	defer stream.CloseSend()
+	err = o.writeGroup(parent, []byte(name), id)
 	if err != nil {
 		return &pb.SymlinkResponse{}, err
-	}
-	w := &gp.WriteRequest{}
-	w.KeyA, w.KeyB = murmur3.Sum128(parent)
-	w.NameKeyA, w.NameKeyB = murmur3.Sum128([]byte(name))
-	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
-	w.Value = id
-	if err := stream.Send(w); err != nil {
-		return &pb.SymlinkResponse{}, err
-	}
-	wres, err := stream.Recv()
-	if err != io.EOF && err != nil {
-		return &pb.SymlinkResponse{}, err
-	}
-	if wres.Tsm > w.Tsm {
-		return &pb.SymlinkResponse{}, ErrStoreHasNewerValue
 	}
 	return &pb.SymlinkResponse{Name: name, Attr: attr}, nil
 }
@@ -663,79 +680,39 @@ func (o *OortFS) Removexattr(id []byte, name string) (*pb.RemovexattrResponse, e
 
 func (o *OortFS) Rename(oldParent, newParent []byte, oldName, newName string) (*pb.RenameResponse, error) {
 	// Check to see if the name exists
-	lr := &gp.LookupRequest{}
-	lr.KeyA, lr.KeyB = murmur3.Sum128(oldParent)
-	lr.NameKeyA, lr.NameKeyB = murmur3.Sum128([]byte(oldName))
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.Lookup(ctx, lr)
+	exists, err := o.lookupGroup(oldParent, []byte(oldName))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return &pb.RenameResponse{}, err
 	}
-	if lres.Err != "" { // TODO: figure out better error passing
+	if !exists {
 		return &pb.RenameResponse{}, nil
 	}
 	// Check if the new name already exists
-	lr.KeyA, lr.KeyB = murmur3.Sum128(newParent)
-	lr.NameKeyA, lr.NameKeyB = murmur3.Sum128([]byte(newName))
-	ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
-	lres, err = o.gclient.Lookup(ctx, lr)
+	exists, err = o.lookupGroup(newParent, []byte(newName))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return &pb.RenameResponse{}, err
 	}
-	if lres.Err != "not found" { // TODO: figure out better error passing
+	if exists { // TODO: figure out better error passing
 		// Exists
 		return &pb.RenameResponse{}, nil
 	}
 	// Get the ID from the group list
-	rstream, err := o.GetGroupReadStream(context.Background())
-	defer rstream.CloseSend()
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	rr := &gp.ReadRequest{}
-	rr.KeyA, rr.KeyB = murmur3.Sum128(oldParent)
-	rr.NameKeyA, rr.NameKeyB = murmur3.Sum128([]byte(oldName))
-	if err := rstream.Send(rr); err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	res, err := rstream.Recv()
-	id := res.Value
+	id, err := o.readGroupItem(oldParent, []byte(oldName))
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
 	// Delete old entry
-	gr := &gp.DeleteRequest{}
-	gr.KeyA = rr.KeyA
-	gr.KeyB = rr.KeyB
-	gr.Tsm = brimtime.TimeToUnixMicro(time.Now())
-	ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
-	_, err = o.gclient.Delete(ctx, gr)
+	err = o.deleteGroup(oldParent, []byte(oldName))
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
 	// Create new entry
 	// TODO: Figure out the right ordering for all of this and of course err recovery
-	wstream, err := o.GetGroupWriteStream(context.Background())
-	defer wstream.CloseSend()
+	err = o.writeGroup(newParent, []byte(newName), id)
 	if err != nil {
 		return &pb.RenameResponse{}, err
-	}
-	w := &gp.WriteRequest{}
-	w.KeyA, w.KeyB = murmur3.Sum128(newParent)
-	w.NameKeyA, w.NameKeyB = murmur3.Sum128([]byte(newName))
-	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
-	w.Value = id
-	if err := wstream.Send(w); err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	wres, err := wstream.Recv()
-	if err != io.EOF && err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	if wres.Tsm > w.Tsm {
-		return &pb.RenameResponse{}, ErrStoreHasNewerValue
 	}
 	// Update inode info
 	b, err := o.GetChunk(id)
