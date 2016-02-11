@@ -89,7 +89,6 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 		log.Println("Root node not found, creating new root")
 		// Need to create the root node
 		r := &pb.InodeEntry{
-			Path:  "/",
 			Inode: 1,
 			IsDir: true,
 		}
@@ -286,7 +285,7 @@ func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
 	return lres.Items, nil
 }
 
-func (o *OortFS) deleteGroup(key, nameKey []byte) error {
+func (o *OortFS) deleteGroupItem(key, nameKey []byte) error {
 	r := &gp.DeleteRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(key)
 	r.NameKeyA, r.NameKeyB = murmur3.Sum128(nameKey)
@@ -374,19 +373,26 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 		return "", &pb.Attr{}, nil
 	}
 	// Add the name to the group
-	err = o.writeGroup(parent, []byte(name), id)
+	d := &pb.DirEntry{
+		Name: name,
+		Id:   id,
+	}
+	b, err := proto.Marshal(d)
+	if err != nil {
+		return "", &pb.Attr{}, err
+	}
+	err = o.writeGroup(parent, []byte(name), b)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
 	// Add the inode entry
 	n := &pb.InodeEntry{
-		Path:   name,
 		Inode:  inode,
 		IsDir:  isdir,
 		Attr:   attr,
 		Blocks: 0,
 	}
-	b, err := proto.Marshal(n)
+	b, err = proto.Marshal(n)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -399,12 +405,17 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 
 func (o *OortFS) Lookup(parent []byte, name string) (string, *pb.Attr, error) {
 	// Get the id
-	id, err := o.readGroupItem(parent, []byte(name))
+	b, err := o.readGroupItem(parent, []byte(name))
+	if err != nil {
+		return "", &pb.Attr{}, err
+	}
+	d := &pb.DirEntry{}
+	err = proto.Unmarshal(b, d)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
 	// Get the Inode entry
-	b, err := o.GetChunk(id)
+	b, err = o.GetChunk(d.Id)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -413,7 +424,7 @@ func (o *OortFS) Lookup(parent []byte, name string) (string, *pb.Attr, error) {
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
-	return n.Path, n.Attr, nil
+	return d.Name, n.Attr, nil
 }
 
 // Needed to be able to sort the dirents
@@ -445,17 +456,22 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	stream, err := o.GetGroupReadStream(context.Background())
 	defer stream.CloseSend()
 	lookup := &gp.ReadRequest{}
+	dirent := &pb.DirEntry{}
 	lookup.KeyA, lookup.KeyB = murmur3.Sum128(id)
 	for _, key := range items {
 		// lookup the key in the group to get the id
-		itemId, err := o.readGroupItemByKey(id, key.NameKeyA, key.NameKeyB)
+		b, err := o.readGroupItemByKey(id, key.NameKeyA, key.NameKeyB)
 		if err != nil {
 			// TODO: Needs beter error handling
 			log.Println("Error with lookup: ", err)
 			continue
 		}
+		err = proto.Unmarshal(b, dirent)
+		if err != nil {
+			return &pb.ReadDirAllResponse{}, err
+		}
 		// get the inode entry
-		b, err := o.GetChunk(itemId)
+		b, err = o.GetChunk(dirent.Id)
 		if err != nil {
 			continue
 		}
@@ -465,9 +481,9 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 			continue
 		}
 		if n.IsDir {
-			e.DirEntries = append(e.DirEntries, &pb.DirEnt{Name: n.Path, Attr: n.Attr})
+			e.DirEntries = append(e.DirEntries, &pb.DirEnt{Name: dirent.Name, Attr: n.Attr})
 		} else {
-			e.FileEntries = append(e.FileEntries, &pb.DirEnt{Name: n.Path, Attr: n.Attr})
+			e.FileEntries = append(e.FileEntries, &pb.DirEnt{Name: dirent.Name, Attr: n.Attr})
 		}
 	}
 	sort.Sort(ByDirent(e.DirEntries))
@@ -491,7 +507,7 @@ func (o *OortFS) Remove(parent []byte, name string) (int32, error) {
 	}
 	// TODO: More error handling needed
 	// Remove from the group
-	err = o.deleteGroup(parent, []byte(name))
+	err = o.deleteGroupItem(parent, []byte(name))
 	if err != nil {
 		return 1, err // Not really sure what should be done here to try to recover from err
 	}
@@ -542,7 +558,6 @@ func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb
 		return &pb.SymlinkResponse{}, nil
 	}
 	n := &pb.InodeEntry{
-		Path:   name,
 		Inode:  inode,
 		IsDir:  false,
 		IsLink: true,
@@ -558,7 +573,15 @@ func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb
 		return &pb.SymlinkResponse{}, err
 	}
 	// Add the name to the group
-	err = o.writeGroup(parent, []byte(name), id)
+	d := &pb.DirEntry{
+		Name: name,
+		Id:   id,
+	}
+	b, err = proto.Marshal(d)
+	if err != nil {
+		return &pb.SymlinkResponse{}, err
+	}
+	err = o.writeGroup(parent, []byte(name), b)
 	if err != nil {
 		return &pb.SymlinkResponse{}, err
 	}
@@ -669,40 +692,27 @@ func (o *OortFS) Rename(oldParent, newParent []byte, oldName, newName string) (*
 		return &pb.RenameResponse{}, nil
 	}
 	// Get the ID from the group list
-	id, err = o.readGroupItem(oldParent, []byte(oldName))
+	b, err := o.readGroupItem(oldParent, []byte(oldName))
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
 	if len(id) != 0 { // Doesn't exist
 		return &pb.RenameResponse{}, nil
 	}
+	d := &pb.DirEntry{}
+	err = proto.Unmarshal(b, d)
+	if err != nil {
+		return &pb.RenameResponse{}, err
+	}
 	// Delete old entry
-	err = o.deleteGroup(oldParent, []byte(oldName))
+	err = o.deleteGroupItem(oldParent, []byte(oldName))
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
 	// Create new entry
-	// TODO: Figure out the right ordering for all of this and of course err recovery
-	err = o.writeGroup(newParent, []byte(newName), id)
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	// Update inode info
-	b, err := o.GetChunk(id)
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	n.Path = newName
-	b, err = proto.Marshal(n)
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
-	err = o.WriteChunk(id, b)
+	d.Name = newName
+	b, err = proto.Marshal(d)
+	err = o.writeGroup(newParent, []byte(newName), b)
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
