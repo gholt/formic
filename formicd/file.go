@@ -286,20 +286,6 @@ func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
 	return lres.Items, nil
 }
 
-// A faster lookup that is just a check to see if the nameKey exists
-func (o *OortFS) lookupGroup(key, nameKey []byte) (bool, error) {
-	r := &gp.LookupRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	r.NameKeyA, r.NameKeyB = murmur3.Sum128(nameKey)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.Lookup(ctx, r)
-	if err != nil {
-		// TODO: Needs beter error handling
-		return false, err
-	}
-	return lres.Err != "not found", nil
-}
-
 func (o *OortFS) deleteGroup(key, nameKey []byte) error {
 	r := &gp.DeleteRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(key)
@@ -379,12 +365,12 @@ func (o *OortFS) SetAttr(id []byte, attr *pb.Attr, v uint32) (*pb.Attr, error) {
 
 func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
 	// Check to see if the name already exists
-	exists, err := o.lookupGroup(parent, []byte(name))
+	val, err := o.readGroupItem(parent, []byte(name))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
 	}
-	if exists {
+	if len(val) > 0 {
 		return "", &pb.Attr{}, nil
 	}
 	// Add the name to the group
@@ -490,19 +476,13 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 }
 
 func (o *OortFS) Remove(parent []byte, name string) (int32, error) {
-	// Check to see if the name exists
-	exists, err := o.lookupGroup(parent, []byte(name))
-	if err != nil {
-		// TODO: Needs beter error handling
-		return 1, err
-	}
-	if !exists { // TODO: figure out better error passing
-		return 1, nil
-	}
 	// Get the ID from the group list
 	id, err := o.readGroupItem(parent, []byte(name))
 	if err != nil {
 		return 1, err
+	}
+	if len(id) == 0 { // Doesn't exist
+		return 1, nil
 	}
 	// Remove the inode
 	err = o.deleteValue(id)
@@ -553,12 +533,12 @@ func (o *OortFS) Update(id []byte, block, blocksize, size uint64, mtime int64) e
 
 func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error) {
 	// Check to see if the name exists
-	exists, err := o.lookupGroup(parent, []byte(name))
+	val, err := o.readGroupItem(parent, []byte(name))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return &pb.SymlinkResponse{}, err
 	}
-	if exists { // TODO: figure out better error passing
+	if len(val) > 1 { // Exists already
 		return &pb.SymlinkResponse{}, nil
 	}
 	n := &pb.InodeEntry{
@@ -679,29 +659,22 @@ func (o *OortFS) Removexattr(id []byte, name string) (*pb.RemovexattrResponse, e
 }
 
 func (o *OortFS) Rename(oldParent, newParent []byte, oldName, newName string) (*pb.RenameResponse, error) {
-	// Check to see if the name exists
-	exists, err := o.lookupGroup(oldParent, []byte(oldName))
-	if err != nil {
-		// TODO: Needs beter error handling
-		return &pb.RenameResponse{}, err
-	}
-	if !exists {
-		return &pb.RenameResponse{}, nil
-	}
 	// Check if the new name already exists
-	exists, err = o.lookupGroup(newParent, []byte(newName))
+	id, err := o.readGroupItem(newParent, []byte(newName))
 	if err != nil {
 		// TODO: Needs beter error handling
 		return &pb.RenameResponse{}, err
 	}
-	if exists { // TODO: figure out better error passing
-		// Exists
+	if len(id) > 0 { // New name already exists
 		return &pb.RenameResponse{}, nil
 	}
 	// Get the ID from the group list
-	id, err := o.readGroupItem(oldParent, []byte(oldName))
+	id, err = o.readGroupItem(oldParent, []byte(oldName))
 	if err != nil {
 		return &pb.RenameResponse{}, err
+	}
+	if len(id) != 0 { // Doesn't exist
+		return &pb.RenameResponse{}, nil
 	}
 	// Delete old entry
 	err = o.deleteGroup(oldParent, []byte(oldName))
