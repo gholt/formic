@@ -221,7 +221,7 @@ func (o *OortFS) deleteValue(id []byte) error {
 	return err
 }
 
-func (o *OortFS) writeGroup(key, nameKey, value []byte) error {
+func (o *OortFS) writeGroup(key, childKey, value []byte) error {
 	stream, err := o.GetGroupWriteStream(context.Background())
 	defer stream.CloseSend()
 	if err != nil {
@@ -229,7 +229,7 @@ func (o *OortFS) writeGroup(key, nameKey, value []byte) error {
 	}
 	w := &gp.WriteRequest{}
 	w.KeyA, w.KeyB = murmur3.Sum128(key)
-	w.NameKeyA, w.NameKeyB = murmur3.Sum128(nameKey)
+	w.ChildKeyA, w.ChildKeyB = murmur3.Sum128(childKey)
 	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
 	w.Value = value
 	if err := stream.Send(w); err != nil {
@@ -245,12 +245,12 @@ func (o *OortFS) writeGroup(key, nameKey, value []byte) error {
 	return nil
 }
 
-func (o *OortFS) readGroupItem(key, nameKey []byte) ([]byte, error) {
-	nameKeyA, nameKeyB := murmur3.Sum128(nameKey)
-	return o.readGroupItemByKey(key, nameKeyA, nameKeyB)
+func (o *OortFS) readGroupItem(key, childKey []byte) ([]byte, error) {
+	childKeyA, childKeyB := murmur3.Sum128(childKey)
+	return o.readGroupItemByKey(key, childKeyA, childKeyB)
 }
 
-func (o *OortFS) readGroupItemByKey(key []byte, nameKeyA, nameKeyB uint64) ([]byte, error) {
+func (o *OortFS) readGroupItemByKey(key []byte, childKeyA, childKeyB uint64) ([]byte, error) {
 	stream, err := o.GetGroupReadStream(context.Background())
 	defer stream.CloseSend()
 	if err != nil {
@@ -258,8 +258,8 @@ func (o *OortFS) readGroupItemByKey(key []byte, nameKeyA, nameKeyB uint64) ([]by
 	}
 	r := &gp.ReadRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	r.NameKeyA = nameKeyA
-	r.NameKeyB = nameKeyB
+	r.ChildKeyA = childKeyA
+	r.ChildKeyB = childKeyB
 	if err := stream.Send(r); err != nil {
 		return nil, err
 	}
@@ -285,10 +285,10 @@ func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
 	return lres.Items, nil
 }
 
-func (o *OortFS) deleteGroupItem(key, nameKey []byte) error {
+func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
 	r := &gp.DeleteRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	r.NameKeyA, r.NameKeyB = murmur3.Sum128(nameKey)
+	r.ChildKeyA, r.ChildKeyB = murmur3.Sum128(childKey)
 	r.Tsm = brimtime.TimeToUnixMicro(time.Now())
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	_, err := o.gclient.Delete(ctx, r)
@@ -460,7 +460,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 	lookup.KeyA, lookup.KeyB = murmur3.Sum128(id)
 	for _, key := range items {
 		// lookup the key in the group to get the id
-		b, err := o.readGroupItemByKey(id, key.NameKeyA, key.NameKeyB)
+		b, err := o.readGroupItemByKey(id, key.ChildKeyA, key.ChildKeyB)
 		if err != nil {
 			// TODO: Needs beter error handling
 			log.Println("Error with lookup: ", err)
