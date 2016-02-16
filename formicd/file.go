@@ -195,7 +195,7 @@ func (o *OortFS) writeValue(id, data []byte) error {
 		Value: data,
 	}
 	w.KeyA, w.KeyB = murmur3.Sum128(id)
-	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	w.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
 	if err := stream.Send(w); err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (o *OortFS) writeValue(id, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if res.Tsm > w.Tsm {
+	if res.TimestampMicro > w.TimestampMicro {
 		return ErrStoreHasNewerValue
 	}
 	return nil
@@ -215,7 +215,7 @@ func (o *OortFS) writeValue(id, data []byte) error {
 func (o *OortFS) deleteValue(id []byte) error {
 	r := &vp.DeleteRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(id)
-	r.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	_, err := o.vclient.Delete(ctx, r)
 	return err
@@ -230,7 +230,7 @@ func (o *OortFS) writeGroup(key, childKey, value []byte) error {
 	w := &gp.WriteRequest{}
 	w.KeyA, w.KeyB = murmur3.Sum128(key)
 	w.ChildKeyA, w.ChildKeyB = murmur3.Sum128(childKey)
-	w.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	w.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
 	w.Value = value
 	if err := stream.Send(w); err != nil {
 		return err
@@ -239,7 +239,7 @@ func (o *OortFS) writeGroup(key, childKey, value []byte) error {
 	if err != io.EOF && err != nil {
 		return err
 	}
-	if wres.Tsm > w.Tsm {
+	if wres.TimestampMicro > w.TimestampMicro {
 		return ErrStoreHasNewerValue
 	}
 	return nil
@@ -275,7 +275,7 @@ func (o *OortFS) readGroupItemByKey(key []byte, childKeyA, childKeyB uint64) ([]
 
 func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
 	r := &gp.LookupGroupRequest{}
-	r.A, r.B = murmur3.Sum128(key)
+	r.KeyA, r.KeyB = murmur3.Sum128(key)
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	lres, err := o.gclient.LookupGroup(ctx, r)
 	if err != nil {
@@ -289,7 +289,7 @@ func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
 	r := &gp.DeleteRequest{}
 	r.KeyA, r.KeyB = murmur3.Sum128(key)
 	r.ChildKeyA, r.ChildKeyB = murmur3.Sum128(childKey)
-	r.Tsm = brimtime.TimeToUnixMicro(time.Now())
+	r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	_, err := o.gclient.Delete(ctx, r)
 	return err
