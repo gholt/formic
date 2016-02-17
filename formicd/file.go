@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/tls"
 	"errors"
+	"hash"
+	"hash/crc32"
 	"io"
 	"log"
 	"os"
@@ -54,6 +56,7 @@ type OortFS struct {
 	gconn              *grpc.ClientConn
 	vclient            vp.ValueStoreClient
 	gclient            gp.GroupStoreClient
+	hasher             func() hash.Hash32
 	sync.RWMutex
 }
 
@@ -68,6 +71,7 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 			InsecureSkipVerify: insecureSkipVerify,
 		}),
 		insecureSkipVerify: insecureSkipVerify,
+		hasher:             crc32.NewIEEE,
 	}
 	o.gopts = append(o.gopts, grpc.WithTransportCredentials(o.gcreds))
 	o.vconn, err = grpc.Dial(o.vaddr, o.gopts...)
@@ -297,11 +301,31 @@ func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
 
 // FileService methods
 func (o *OortFS) GetChunk(id []byte) ([]byte, error) {
-	return o.readValue(id)
+	b, err := o.readValue(id)
+	if err != nil {
+		return nil, err
+	}
+	fb := &pb.FileBlock{}
+	err = proto.Unmarshal(b, fb)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Validate checksum and handle errors
+	return fb.Data, nil
 }
 
 func (o *OortFS) WriteChunk(id, data []byte) error {
-	return o.writeValue(id, data)
+	crc := o.hasher()
+	crc.Write(data)
+	fb := &pb.FileBlock{
+		Data:     data,
+		Checksum: crc.Sum32(),
+	}
+	b, err := proto.Marshal(fb)
+	if err != nil {
+		return err
+	}
+	return o.writeValue(id, b)
 }
 
 func (o *OortFS) GetAttr(id []byte) (*pb.Attr, error) {
