@@ -59,6 +59,9 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 		gaddr:  gaddr,
 		hasher: crc32.NewIEEE,
 	}
+	// TODO: These 10s here are the number of grpc streams the api can make per
+	// request type; should likely be configurable somewhere along the line,
+	// but hardcoded for now.
 	o.vstore, err = api.NewValueStore(vaddr, 10, insecureSkipVerify, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
