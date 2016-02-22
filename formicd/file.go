@@ -21,6 +21,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	InodeEntryVersion = 1
+	DirEntryVersion   = 1
+	FileBlockVersion  = 1
+)
+
 type FileService interface {
 	GetAttr(id []byte) (*pb.Attr, error)
 	SetAttr(id []byte, attr *pb.Attr, valid uint32) (*pb.Attr, error)
@@ -79,8 +85,9 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 		log.Println("Root node not found, creating new root")
 		// Need to create the root node
 		r := &pb.InodeEntry{
-			Inode: 1,
-			IsDir: true,
+			Version: InodeEntryVersion,
+			Inode:   1,
+			IsDir:   true,
 		}
 		ts := time.Now().Unix()
 		r.Attr = &pb.Attr{
@@ -204,6 +211,7 @@ func (o *OortFS) WriteChunk(id, data []byte) error {
 	crc := o.hasher()
 	crc.Write(data)
 	fb := &pb.FileBlock{
+		Version:  FileBlockVersion,
 		Data:     data,
 		Checksum: crc.Sum32(),
 	}
@@ -284,8 +292,9 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 	}
 	// Add the name to the group
 	d := &pb.DirEntry{
-		Name: name,
-		Id:   id,
+		Version: DirEntryVersion,
+		Name:    name,
+		Id:      id,
 	}
 	b, err := proto.Marshal(d)
 	if err != nil {
@@ -297,10 +306,11 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 	}
 	// Add the inode entry
 	n := &pb.InodeEntry{
-		Inode:  inode,
-		IsDir:  isdir,
-		Attr:   attr,
-		Blocks: 0,
+		Version: InodeEntryVersion,
+		Inode:   inode,
+		IsDir:   isdir,
+		Attr:    attr,
+		Blocks:  0,
 	}
 	b, err = proto.Marshal(n)
 	if err != nil {
@@ -465,11 +475,12 @@ func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb
 		return &pb.SymlinkResponse{}, nil
 	}
 	n := &pb.InodeEntry{
-		Inode:  inode,
-		IsDir:  false,
-		IsLink: true,
-		Target: target,
-		Attr:   attr,
+		Version: InodeEntryVersion,
+		Inode:   inode,
+		IsDir:   false,
+		IsLink:  true,
+		Target:  target,
+		Attr:    attr,
 	}
 	b, err := proto.Marshal(n)
 	if err != nil {
@@ -481,8 +492,9 @@ func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb
 	}
 	// Add the name to the group
 	d := &pb.DirEntry{
-		Name: name,
-		Id:   id,
+		Version: DirEntryVersion,
+		Name:    name,
+		Id:      id,
 	}
 	b, err = proto.Marshal(d)
 	if err != nil {
