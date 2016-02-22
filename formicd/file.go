@@ -72,16 +72,16 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 	if err != nil {
 		return &OortFS{}, err
 	}
-    if err = o.vstore.Startup(); err != nil {
+	if err = o.vstore.Startup(); err != nil {
 		return &OortFS{}, err
-    }
+	}
 	o.gstore, err = api.NewGroupStore(gaddr, 10, insecureSkipVerify, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
 	}
-    if err = o.gstore.Startup(); err != nil {
+	if err = o.gstore.Startup(); err != nil {
 		return &OortFS{}, err
-    }
+	}
 	// TODO: This should be setup out of band when an FS is first created
 	// NOTE: This also means that it is only single user until we init filesystems out of band
 	// Init the root node
