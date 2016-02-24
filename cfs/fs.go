@@ -268,6 +268,7 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 			rctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 			d, err := f.rpc.api.ReadDirAll(rctx, &pb.ReadDirAllRequest{Inode: uint64(r.Node)})
+			log.Println(d)
 			if err != nil {
 				log.Fatalf("Read on dir failed: %v", err)
 			}
