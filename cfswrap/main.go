@@ -47,7 +47,6 @@ func main() {
 	}
 	process, err := os.StartProcess(path, clargs, &attr)
 	if err == nil {
-		fmt.Println(process.Pid)
 		// It is not clear from docs, but Realease actually detaches the process
 		err = process.Release()
 		if err != nil {
