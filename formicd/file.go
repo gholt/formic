@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/tls"
 	"errors"
 	"hash"
 	"hash/crc32"
-	"io"
 	"log"
 	"os"
 	"sort"
@@ -16,13 +14,11 @@ import (
 
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
+	"github.com/gholt/store"
 	"github.com/gogo/protobuf/proto"
-	gp "github.com/pandemicsyn/oort/api/groupproto"
-	vp "github.com/pandemicsyn/oort/api/valueproto"
+	"github.com/pandemicsyn/oort/api"
 	"github.com/spaolacci/murmur3"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -53,16 +49,11 @@ type FileService interface {
 var ErrStoreHasNewerValue = errors.New("Error store already has newer value")
 
 type OortFS struct {
-	vaddr              string
-	gaddr              string
-	gopts              []grpc.DialOption
-	gcreds             credentials.TransportAuthenticator
-	insecureSkipVerify bool
-	vconn              *grpc.ClientConn
-	gconn              *grpc.ClientConn
-	vclient            vp.ValueStoreClient
-	gclient            gp.GroupStoreClient
-	hasher             func() hash.Hash32
+	vaddr  string
+	gaddr  string
+	vstore store.ValueStore
+	gstore api.GroupStore
+	hasher func() hash.Hash32
 	sync.RWMutex
 }
 
@@ -70,26 +61,21 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 	// TODO: This all eventually needs to replaced with value and group rings
 	var err error
 	o := &OortFS{
-		vaddr: vaddr,
-		gaddr: gaddr,
-		gopts: grpcOpts,
-		gcreds: credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: insecureSkipVerify,
-		}),
-		insecureSkipVerify: insecureSkipVerify,
-		hasher:             crc32.NewIEEE,
+		vaddr:  vaddr,
+		gaddr:  gaddr,
+		hasher: crc32.NewIEEE,
 	}
-	o.gopts = append(o.gopts, grpc.WithTransportCredentials(o.gcreds))
-	o.vconn, err = grpc.Dial(o.vaddr, o.gopts...)
+	// TODO: These 10s here are the number of grpc streams the api can make per
+	// request type; should likely be configurable somewhere along the line,
+	// but hardcoded for now.
+	o.vstore, err = api.NewValueStore(vaddr, 10, insecureSkipVerify, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
 	}
-	o.vclient = vp.NewValueStoreClient(o.vconn)
-	o.gconn, err = grpc.Dial(o.gaddr, o.gopts...)
+	o.gstore, err = api.NewGroupStore(gaddr, 10, insecureSkipVerify, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
 	}
-	o.gclient = gp.NewGroupStoreClient(o.gconn)
 	// TODO: This should be setup out of band when an FS is first created
 	// NOTE: This also means that it is only single user until we init filesystems out of band
 	// Init the root node
@@ -126,131 +112,47 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 	return o, nil
 }
 
-func (o *OortFS) ValueConnClose() error {
-	o.Lock()
-	defer o.Unlock()
-	return o.vconn.Close()
-}
-
-func (o *OortFS) ValueConnState() (grpc.ConnectivityState, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.vconn.State()
-}
-
-func (o *OortFS) GetValueReadStream(ctx context.Context, opts ...grpc.CallOption) (vp.ValueStore_StreamReadClient, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.vclient.StreamRead(ctx)
-}
-
-func (o *OortFS) GetValueWriteStream(ctx context.Context, opts ...grpc.CallOption) (vp.ValueStore_StreamWriteClient, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.vclient.StreamWrite(ctx)
-}
-
-func (o *OortFS) GroupConnClose() error {
-	o.Lock()
-	defer o.Unlock()
-	return o.gconn.Close()
-}
-
-func (o *OortFS) GroupConnState() (grpc.ConnectivityState, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.gconn.State()
-}
-
-func (o *OortFS) GetGroupReadStream(ctx context.Context, opts ...grpc.CallOption) (gp.GroupStore_StreamReadClient, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.gclient.StreamRead(ctx)
-}
-
-func (o *OortFS) GetGroupWriteStream(ctx context.Context, opts ...grpc.CallOption) (gp.GroupStore_StreamWriteClient, error) {
-	o.RLock()
-	defer o.RUnlock()
-	return o.gclient.StreamWrite(ctx)
-}
-
 // Helper methods to get data from value and group store
 func (o *OortFS) readValue(id []byte) ([]byte, error) {
-	stream, err := o.GetValueReadStream(context.Background())
-	defer stream.CloseSend()
-	if err != nil {
-		return []byte(""), err
-	}
-	r := &vp.ReadRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(id)
-	if err := stream.Send(r); err != nil {
-		return []byte(""), err
-	}
-	res, err := stream.Recv()
-	if err == io.EOF {
-		return []byte(""), nil
-	}
-	if err != nil {
-		return []byte(""), err
-	}
-	return res.Value, nil
+	// TODO: You might want to make this whole area pass in reusable []byte to
+	// lessen gc pressure.
+	keyA, keyB := murmur3.Sum128(id)
+	_, v, err := o.vstore.Read(keyA, keyB, nil)
+	return v, err
 }
 
 func (o *OortFS) writeValue(id, data []byte) error {
-	stream, err := o.GetValueWriteStream(context.Background())
-	defer stream.CloseSend()
+	keyA, keyB := murmur3.Sum128(id)
+	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
+	oldTimestampMicro, err := o.vstore.Write(keyA, keyB, timestampMicro, data)
 	if err != nil {
 		return err
 	}
-	w := &vp.WriteRequest{
-		Value: data,
-	}
-	w.KeyA, w.KeyB = murmur3.Sum128(id)
-	w.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
-	if err := stream.Send(w); err != nil {
-		return err
-	}
-	res, err := stream.Recv()
-	if err == io.EOF {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if res.TimestampMicro > w.TimestampMicro {
+	if oldTimestampMicro >= timestampMicro {
 		return ErrStoreHasNewerValue
 	}
 	return nil
 }
 
 func (o *OortFS) deleteValue(id []byte) error {
-	r := &vp.DeleteRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(id)
-	r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	_, err := o.vclient.Delete(ctx, r)
+	keyA, keyB := murmur3.Sum128(id)
+	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
+	oldTimestampMicro, err := o.vstore.Delete(keyA, keyB, timestampMicro)
+	if oldTimestampMicro >= timestampMicro {
+		return ErrStoreHasNewerValue
+	}
 	return err
 }
 
 func (o *OortFS) writeGroup(key, childKey, value []byte) error {
-	stream, err := o.GetGroupWriteStream(context.Background())
-	defer stream.CloseSend()
+	keyA, keyB := murmur3.Sum128(key)
+	childKeyA, childKeyB := murmur3.Sum128(childKey)
+	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
+	oldTimestampMicro, err := o.gstore.Write(keyA, keyB, childKeyA, childKeyB, timestampMicro, value)
 	if err != nil {
-		return err
+		return nil
 	}
-	w := &gp.WriteRequest{}
-	w.KeyA, w.KeyB = murmur3.Sum128(key)
-	w.ChildKeyA, w.ChildKeyB = murmur3.Sum128(childKey)
-	w.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
-	w.Value = value
-	if err := stream.Send(w); err != nil {
-		return err
-	}
-	wres, err := stream.Recv()
-	if err != io.EOF && err != nil {
-		return err
-	}
-	if wres.TimestampMicro > w.TimestampMicro {
+	if oldTimestampMicro >= timestampMicro {
 		return ErrStoreHasNewerValue
 	}
 	return nil
@@ -262,48 +164,32 @@ func (o *OortFS) readGroupItem(key, childKey []byte) ([]byte, error) {
 }
 
 func (o *OortFS) readGroupItemByKey(key []byte, childKeyA, childKeyB uint64) ([]byte, error) {
-	stream, err := o.GetGroupReadStream(context.Background())
-	defer stream.CloseSend()
-	if err != nil {
-		return nil, err
-	}
-	r := &gp.ReadRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	r.ChildKeyA = childKeyA
-	r.ChildKeyB = childKeyB
-	if err := stream.Send(r); err != nil {
-		return nil, err
-	}
-	res, err := stream.Recv()
-	if err == io.EOF {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return res.Value, nil
-}
-
-func (o *OortFS) readGroup(key []byte) ([]*gp.LookupGroupItem, error) {
-	r := &gp.LookupGroupRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	lres, err := o.gclient.LookupGroup(ctx, r)
-	if err != nil {
-		// TODO: Needs beter error handling
-		return nil, err
-	}
-	return lres.Items, nil
+	keyA, keyB := murmur3.Sum128(key)
+	_, v, err := o.gstore.Read(keyA, keyB, childKeyA, childKeyB, nil)
+	return v, err
 }
 
 func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
-	r := &gp.DeleteRequest{}
-	r.KeyA, r.KeyB = murmur3.Sum128(key)
-	r.ChildKeyA, r.ChildKeyB = murmur3.Sum128(childKey)
-	r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	_, err := o.gclient.Delete(ctx, r)
-	return err
+	keyA, keyB := murmur3.Sum128(key)
+	childKeyA, childKeyB := murmur3.Sum128(key)
+	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
+	oldTimestampMicro, err := o.gstore.Delete(keyA, keyB, childKeyA, childKeyB, timestampMicro)
+	if err != nil {
+		return err
+	}
+	if oldTimestampMicro >= timestampMicro {
+		return ErrStoreHasNewerValue
+	}
+	return nil
+	/*
+		r := &gp.DeleteRequest{}
+		r.KeyA, r.KeyB = murmur3.Sum128(key)
+		r.ChildKeyA, r.ChildKeyB = murmur3.Sum128(childKey)
+		r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
+		ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+		_, err := o.gclient.Delete(ctx, r)
+		return err
+	*/
 }
 
 // FileService methods
@@ -477,24 +363,21 @@ func (d ByDirent) Less(i, j int) bool {
 }
 
 func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
+	keyA, keyB := murmur3.Sum128(id)
 	// Get the keys from the group
-	items, err := o.readGroup(id)
+	items, err := o.gstore.LookupGroup(keyA, keyB)
 	log.Println("ITEMS: ", items)
 	if err != nil {
 		// TODO: Needs beter error handling
 		log.Println("Error looking up group: ", err)
 		return &pb.ReadDirAllResponse{}, err
 	}
-	// Iterate over each key, getting the ID then the Inode Entry
+	// Iterate over each item, getting the ID then the Inode Entry
 	e := &pb.ReadDirAllResponse{}
-	stream, err := o.GetGroupReadStream(context.Background())
-	defer stream.CloseSend()
-	lookup := &gp.ReadRequest{}
 	dirent := &pb.DirEntry{}
-	lookup.KeyA, lookup.KeyB = murmur3.Sum128(id)
-	for _, key := range items {
-		// lookup the key in the group to get the id
-		b, err := o.readGroupItemByKey(id, key.ChildKeyA, key.ChildKeyB)
+	for _, item := range items {
+		// lookup the item in the group to get the id
+		_, b, err := o.gstore.Read(keyA, keyB, item.ChildKeyA, item.ChildKeyB, nil)
 		if err != nil {
 			// TODO: Needs beter error handling
 			log.Println("Error with lookup: ", err)
