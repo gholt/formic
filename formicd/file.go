@@ -171,7 +171,7 @@ func (o *OortFS) readGroupItemByKey(key []byte, childKeyA, childKeyB uint64) ([]
 
 func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
 	keyA, keyB := murmur3.Sum128(key)
-	childKeyA, childKeyB := murmur3.Sum128(key)
+	childKeyA, childKeyB := murmur3.Sum128(childKey)
 	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
 	oldTimestampMicro, err := o.gstore.Delete(keyA, keyB, childKeyA, childKeyB, timestampMicro)
 	if err != nil {
@@ -424,6 +424,7 @@ func (o *OortFS) Remove(parent []byte, name string) (int32, error) {
 		return 1, err
 	}
 	// Remove the inode
+	// TODO: Need to delete more than just the inode
 	err = o.deleteValue(d.Id)
 	if err != nil {
 		return 1, err
