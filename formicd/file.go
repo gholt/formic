@@ -52,7 +52,7 @@ type OortFS struct {
 	vaddr  string
 	gaddr  string
 	vstore store.ValueStore
-	gstore api.GroupStore
+	gstore store.GroupStore
 	hasher func() hash.Hash32
 	sync.RWMutex
 }
