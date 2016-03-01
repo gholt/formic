@@ -57,7 +57,7 @@ type OortFS struct {
 	sync.RWMutex
 }
 
-func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.DialOption) (*OortFS, error) {
+func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error) {
 	// TODO: This all eventually needs to replaced with value and group rings
 	var err error
 	o := &OortFS{
@@ -68,11 +68,11 @@ func NewOortFS(vaddr, gaddr string, insecureSkipVerify bool, grpcOpts ...grpc.Di
 	// TODO: These 10s here are the number of grpc streams the api can make per
 	// request type; should likely be configurable somewhere along the line,
 	// but hardcoded for now.
-	o.vstore, err = api.NewValueStore(vaddr, 10, insecureSkipVerify, grpcOpts...)
+	o.vstore, err = api.NewValueStore(vaddr, 10, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
 	}
-	o.gstore, err = api.NewGroupStore(gaddr, 10, insecureSkipVerify, grpcOpts...)
+	o.gstore, err = api.NewGroupStore(gaddr, 10, grpcOpts...)
 	if err != nil {
 		return &OortFS{}, err
 	}
