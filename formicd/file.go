@@ -283,7 +283,7 @@ func (o *OortFS) SetAttr(id []byte, attr *pb.Attr, v uint32) (*pb.Attr, error) {
 func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
 	// Check to see if the name already exists
 	val, err := o.readGroupItem(parent, []byte(name))
-	if err != store.ErrNotFound && err != nil {
+	if err != nil && !store.IsNotFound(err) {
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
 	}
@@ -326,7 +326,7 @@ func (o *OortFS) Create(parent, id []byte, inode uint64, name string, attr *pb.A
 func (o *OortFS) Lookup(parent []byte, name string) (string, *pb.Attr, error) {
 	// Get the id
 	b, err := o.readGroupItem(parent, []byte(name))
-	if err == store.ErrNotFound {
+	if store.IsNotFound(err) {
 		return "", &pb.Attr{}, nil
 	} else if err != nil {
 		return "", &pb.Attr{}, err
@@ -413,7 +413,7 @@ func (o *OortFS) ReadDirAll(id []byte) (*pb.ReadDirAllResponse, error) {
 func (o *OortFS) Remove(parent []byte, name string) (int32, error) {
 	// Get the ID from the group list
 	b, err := o.readGroupItem(parent, []byte(name))
-	if err == store.ErrNotFound {
+	if store.IsNotFound(err) {
 		return 1, nil
 	} else if err != nil {
 		return 1, err
@@ -474,7 +474,7 @@ func (o *OortFS) Update(id []byte, block, blocksize, size uint64, mtime int64) e
 func (o *OortFS) Symlink(parent, id []byte, name string, target string, attr *pb.Attr, inode uint64) (*pb.SymlinkResponse, error) {
 	// Check to see if the name exists
 	val, err := o.readGroupItem(parent, []byte(name))
-	if err != store.ErrNotFound && err != nil {
+	if err != nil && !store.IsNotFound(err) {
 		// TODO: Needs beter error handling
 		return &pb.SymlinkResponse{}, err
 	}
@@ -610,7 +610,7 @@ func (o *OortFS) Removexattr(id []byte, name string) (*pb.RemovexattrResponse, e
 func (o *OortFS) Rename(oldParent, newParent []byte, oldName, newName string) (*pb.RenameResponse, error) {
 	// Check if the new name already exists
 	id, err := o.readGroupItem(newParent, []byte(newName))
-	if err != store.ErrNotFound && err != nil {
+	if err != nil && !store.IsNotFound(err) {
 		// TODO: Needs beter error handling
 		return &pb.RenameResponse{}, err
 	}
@@ -619,7 +619,7 @@ func (o *OortFS) Rename(oldParent, newParent []byte, oldName, newName string) (*
 	}
 	// Get the ID from the group list
 	b, err := o.readGroupItem(oldParent, []byte(oldName))
-	if err == store.ErrNotFound {
+	if store.IsNotFound(err) {
 		return &pb.RenameResponse{}, nil
 	}
 	if err != nil {
