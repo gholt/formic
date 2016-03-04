@@ -181,20 +181,14 @@ func (o *OortFS) deleteGroupItem(key, childKey []byte) error {
 		return ErrStoreHasNewerValue
 	}
 	return nil
-	/*
-		r := &gp.DeleteRequest{}
-		r.KeyA, r.KeyB = murmur3.Sum128(key)
-		r.ChildKeyA, r.ChildKeyB = murmur3.Sum128(childKey)
-		r.TimestampMicro = brimtime.TimeToUnixMicro(time.Now())
-		ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-		_, err := o.gclient.Delete(ctx, r)
-		return err
-	*/
 }
 
 // FileService methods
 func (o *OortFS) GetChunk(id []byte) ([]byte, error) {
 	b, err := o.readValue(id)
+	if store.IsNotFound(err) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
