@@ -5,9 +5,10 @@
 
 ## Command line format and required options
 
-    cfs device path_to_mount_point  -o [MOUNT OPTIONS]
+    cfs mount device path_to_mount_point  -o [MOUNT OPTIONS]
       Command line arguments are positional
-        device                  is currently not used
+        command                 "mount" is required
+        device                  region://<account number>/<file system name> is required
         path_to_mount_point     is required
         -o [List of Options]    the -o is required
             host=[ipaddress:port]     is the required location of the formic service
@@ -15,7 +16,7 @@
 
 ###Example to mount filesystem:
 
-* `mount -t cfs unknown /mnt/cfsdrive -o host=localhost:8445,debug`
+* `mount -t cfs unknown /mnt/cfsdrive -o host=localhost:8445,debug,rw`
 
 
 ### Examples to unmount filesystem:
