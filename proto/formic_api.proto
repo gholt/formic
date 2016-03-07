@@ -269,6 +269,8 @@ message InodeEntry {
     uint64 blocks             = 10;
     uint64 blockSize          = 11;
     uint64 lastBlock          = 12;
+    uint64 account            = 13;
+    uint64 fs                 = 14;
 }
 
 // DirEntry

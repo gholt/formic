@@ -91,6 +91,8 @@ func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error
 			Version: InodeEntryVersion,
 			Inode:   1,
 			IsDir:   true,
+			Account: 1,
+			Fs:      1,
 		}
 		ts := time.Now().Unix()
 		r.Attr = &pb.Attr{
@@ -279,13 +281,18 @@ func (o *OortFS) SetAttr(ctx context.Context, id []byte, attr *pb.Attr, v uint32
 
 func (o *OortFS) Create(ctx context.Context, parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error) {
 	// Check to see if the name already exists
-	val, err := o.readGroupItem(ctx, parent, []byte(name))
+	b, err := o.readGroupItem(ctx, parent, []byte(name))
 	if err != nil && !store.IsNotFound(err) {
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
 	}
-	if len(val) > 0 {
+	if len(b) > 0 {
 		return "", &pb.Attr{}, nil
+	}
+	p := &pb.DirEntry{}
+	err = proto.Unmarshal(b, p)
+	if err != nil {
+		return "", &pb.Attr{}, err
 	}
 	// Add the name to the group
 	d := &pb.DirEntry{
@@ -293,7 +300,7 @@ func (o *OortFS) Create(ctx context.Context, parent, id []byte, inode uint64, na
 		Name:    name,
 		Id:      id,
 	}
-	b, err := proto.Marshal(d)
+	b, err = proto.Marshal(d)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
