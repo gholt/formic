@@ -15,6 +15,7 @@ import (
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
 	"github.com/gholt/store"
+	"github.com/gholt/ring"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pandemicsyn/oort/api"
 	"github.com/spaolacci/murmur3"
@@ -59,24 +60,29 @@ type OortFS struct {
 }
 
 func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error) {
-	// TODO: This all eventually needs to replaced with value and group rings
-	var err error
+	// TODO: This all eventually needs to replaced with "real" rings.
+    b := ring.NewBuilder(64)
+    b.AddNode(true, 1, nil, []string{vaddr}, "", nil)
+    vring := b.Ring()
+    b = ring.NewBuilder(64)
+    b.AddNode(true, 1, nil, []string{gaddr}, "", nil)
+    gring := b.Ring()
 	o := &OortFS{
 		vaddr:  vaddr,
 		gaddr:  gaddr,
 		hasher: crc32.NewIEEE,
 	}
-	// TODO: These 10s here are the number of grpc streams the api can make per
-	// request type; should likely be configurable somewhere along the line,
-	// but hardcoded for now.
-	o.vstore, err = api.NewValueStore(vaddr, 10, grpcOpts...)
-	if err != nil {
-		return &OortFS{}, err
-	}
-	o.gstore, err = api.NewGroupStore(gaddr, 10, grpcOpts...)
-	if err != nil {
-		return &OortFS{}, err
-	}
+    // TODO: These 10s here are arbitrary.
+	o.vstore = api.NewReplValueStore(&api.ReplValueStoreConfig{
+        ConcurrentRequestsPerStore: 10,
+        GRPCOpts:                   grpcOpts,
+    })
+    o.vstore.(*api.ReplValueStore).SetRing(vring)
+	o.gstore = api.NewReplGroupStore(&api.ReplGroupStoreConfig{
+        ConcurrentRequestsPerStore: 10,
+        GRPCOpts:                   grpcOpts,
+    })
+    o.gstore.(*api.ReplGroupStore).SetRing(gring)
 	// TODO: This should be setup out of band when an FS is first created
 	// NOTE: This also means that it is only single user until we init filesystems out of band
 	// Init the root node
@@ -84,6 +90,11 @@ func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error
 	// TODO: The context.Background() calls likely need to be replaced with
 	// actual contexts having a timeouts.
 	n, err := o.GetChunk(context.Background(), id)
+    if err != nil {
+        // I don't think you care about the err here; but I'm not sure. The
+        // compiler was complaining it wasn't getting used, so I put in this
+        // silly empty if statement.
+    }
 	if len(n) == 0 {
 		log.Println("Root node not found, creating new root")
 		// Need to create the root node
