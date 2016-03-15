@@ -62,10 +62,10 @@ type OortFS struct {
 func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error) {
 	// TODO: This all eventually needs to replaced with "real" rings.
 	b := ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{vaddr}, "", nil)
+	b.AddNode(true, 1, nil, []string{"", "", vaddr}, "", nil)
 	vring := b.Ring()
 	b = ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{gaddr}, "", nil)
+	b.AddNode(true, 1, nil, []string{"", "", gaddr}, "", nil)
 	gring := b.Ring()
 	o := &OortFS{
 		vaddr:  vaddr,
@@ -74,11 +74,13 @@ func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error
 	}
 	// TODO: These 10s here are arbitrary.
 	o.vstore = api.NewReplValueStore(&api.ReplValueStoreConfig{
+		AddressIndex:               2,
 		ConcurrentRequestsPerStore: 10,
 		GRPCOpts:                   grpcOpts,
 	})
 	o.vstore.(*api.ReplValueStore).SetRing(vring)
 	o.gstore = api.NewReplGroupStore(&api.ReplGroupStoreConfig{
+		AddressIndex:               2,
 		ConcurrentRequestsPerStore: 10,
 		GRPCOpts:                   grpcOpts,
 	})
