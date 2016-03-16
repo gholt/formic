@@ -18,13 +18,20 @@ go build . && ./formic
 
 ## formicd command line options(with defaults):
 
-Option | Description
------- | -----------
--cert_file string | The TLS cert file (default "/etc/oort/server.crt")      
--key_file string | The TLS key file (default "/etc/oort/server.key")
--oorthost string | host:port to use when connecting to oort (default "127.0.0.1:6379")
--port int |          The server port (default 8443)
--tls      |         Connection uses TLS if true, else plain TCP (default true)
+Option | default | description
+------ | ------- | -----------
+usetls | true | Connection uses TLS if true, else plain TCP
+certFile | /etc/oort/server.crt | The TLS cert file
+keyFile | /etc/oort/server.key | The TLS key file
+port | 9443 | The server port
+oortValueHost | 127.0.0.1:6379 | host:port to use when connecting to oort value
+oortGroupHost | 127.0.0.1:6380 | host:port to use when connecting to oort group
+insecureSkipVerify | false | don't verify cert
+oortClientMutualTLS | false | whether or not the server expects mutual tls auth
+oortClientCert | /etc/oort/client.crt | cert file to use
+oortClientKey | /etc/oort/client.key | key file to use
+oortClientCA | /etc/oort/ca.pem | ca file to use
+
 
 
 ## To run as a deamon with systemd:
@@ -35,10 +42,16 @@ cp -av packaging/root/usr/share/formicd/systemd/formicd.service /lib/systemd/sys
 
 To override any defaults add the new config options into the /etc/default/formicd file:
 * FORMICD_TLS
-* FORMICD_OORT_HOST
+* FORMICD_OORT_VALUE_HOST
+* FORMICD_OORT_GROUP_HOST
 * FORMICD_PORT
 * FORMICD_CERT_FILE
 * FORMICD_KEY_FILE
+* FORMICD_INSECURE_SKIP_VERIFY
+* FORMICD_MUTUAL_TLS
+* FORMICD_CLIENT_CA_FILE
+* FORMICD_CLIENT_CERT_FILE
+* FORMICD_CLIENT_KEY_FILE
 
 *Example:*
 
