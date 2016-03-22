@@ -14,13 +14,10 @@ import (
 
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
-	"github.com/gholt/ring"
 	"github.com/gholt/store"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pandemicsyn/oort/api"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -51,40 +48,14 @@ type FileService interface {
 var ErrStoreHasNewerValue = errors.New("Error store already has newer value")
 
 type OortFS struct {
-	vaddr  string
-	gaddr  string
 	vstore store.ValueStore
 	gstore store.GroupStore
 	hasher func() hash.Hash32
 	sync.RWMutex
 }
 
-func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error) {
-	// TODO: This all eventually needs to replaced with "real" rings.
-	b := ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{"", "", vaddr}, "", nil)
-	vring := b.Ring()
-	b = ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{"", "", gaddr}, "", nil)
-	gring := b.Ring()
-	o := &OortFS{
-		vaddr:  vaddr,
-		gaddr:  gaddr,
-		hasher: crc32.NewIEEE,
-	}
-	// TODO: These 10s here are arbitrary.
-	o.vstore = api.NewReplValueStore(&api.ReplValueStoreConfig{
-		AddressIndex:               2,
-		ConcurrentRequestsPerStore: 10,
-		GRPCOpts:                   grpcOpts,
-	})
-	o.vstore.(*api.ReplValueStore).SetRing(vring)
-	o.gstore = api.NewReplGroupStore(&api.ReplGroupStoreConfig{
-		AddressIndex:               2,
-		ConcurrentRequestsPerStore: 10,
-		GRPCOpts:                   grpcOpts,
-	})
-	o.gstore.(*api.ReplGroupStore).SetRing(gring)
+func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error) {
+	o := &OortFS{hasher: crc32.NewIEEE, vstore: vstore, gstore: gstore}
 	// TODO: This should be setup out of band when an FS is first created
 	// NOTE: This also means that it is only single user until we init filesystems out of band
 	// Init the root node

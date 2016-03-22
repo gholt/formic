@@ -7,11 +7,13 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/pandemicsyn/oort/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
 	pb "github.com/creiht/formic/proto"
+	"github.com/gholt/ring"
 	"github.com/pandemicsyn/ftls"
 
 	"net"
@@ -113,7 +115,24 @@ func main() {
 	if err != nil {
 		grpclog.Fatalln("Cannot setup tls config:", err)
 	}
-	fs, err := NewOortFS(*oortValueHost, *oortGroupHost, copt)
+	// TODO: This all eventually needs to replaced with "real" rings.
+	b := ring.NewBuilder(64)
+	b.AddNode(true, 1, nil, []string{"", "", *oortValueHost}, "", nil)
+	vring := b.Ring()
+	b = ring.NewBuilder(64)
+	b.AddNode(true, 1, nil, []string{"", "", *oortGroupHost}, "", nil)
+	gring := b.Ring()
+	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
+		AddressIndex: 2,
+		GRPCOpts:     []grpc.DialOption{copt},
+	})
+	vstore.SetRing(vring)
+	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
+		AddressIndex: 2,
+		GRPCOpts:     []grpc.DialOption{copt},
+	})
+	gstore.SetRing(gring)
+	fs, err := NewOortFS(vstore, gstore)
 	if err != nil {
 		grpclog.Fatalln(err)
 	}
