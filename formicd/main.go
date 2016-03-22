@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/pandemicsyn/oort/api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
@@ -15,6 +14,7 @@ import (
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/ring"
 	"github.com/pandemicsyn/ftls"
+	"github.com/pandemicsyn/oort/api"
 
 	"net"
 )
