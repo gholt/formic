@@ -21,16 +21,16 @@ import (
 
 var (
 	usetls              = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
-	certFile            = flag.String("cert_file", "/etc/oort/server.crt", "The TLS cert file")
-	keyFile             = flag.String("key_file", "/etc/oort/server.key", "The TLS key file")
-	port                = flag.Int("port", 9443, "The server port")
-	oortValueHost       = flag.String("oortvaluehost", "127.0.0.1:6379", "host:port to use when connecting to oort value")
-	oortGroupHost       = flag.String("oortgrouphost", "127.0.0.1:6380", "host:port to use when connecting to oort group")
+	certFile            = flag.String("cert_file", "/var/lib/formic/server.crt", "The TLS cert file")
+	keyFile             = flag.String("key_file", "/var/lib/formic/server.key", "The TLS key file")
+	port                = flag.Int("port", 8445, "The server port")
+	oortValueRing       = flag.String("oortvaluering", "/var/lib/formic/ring/valuestore.ring", "Location of value store ring file")
+	oortGroupRing       = flag.String("oortgroupring", "/var/lib/formic/ring/groupstore.ring", "Location of value store ring file")
 	insecureSkipVerify  = flag.Bool("skipverify", false, "don't verify cert")
-	oortClientMutualTLS = flag.Bool("mutualtls", false, "whether or not the server expects mutual tls auth")
-	oortClientCert      = flag.String("oort-client-cert", "/etc/oort/client.crt", "cert file to use")
-	oortClientKey       = flag.String("oort-client-key", "/etc/oort/client.key", "key file to use")
-	oortClientCA        = flag.String("oort-client-ca", "/etc/oort/ca.pem", "ca file to use")
+	oortClientMutualTLS = flag.Bool("mutualtls", true, "whether or not the server expects mutual tls auth")
+	oortClientCert      = flag.String("oort-client-cert", "/var/lib/formic/client.crt", "cert file to use")
+	oortClientKey       = flag.String("oort-client-key", "/var/lib/formic/client.key", "key file to use")
+	oortClientCA        = flag.String("oort-client-ca", "/var/lib/formic/ca.pem", "ca file to use")
 )
 
 // FatalIf is just a lazy log/panic on error func
@@ -48,14 +48,14 @@ func main() {
 		*usetls = true
 	}
 
-	envoortvhost := os.Getenv("FORMICD_OORT_VALUE_HOST")
-	if envoortvhost != "" {
-		*oortValueHost = envoortvhost
+	envoortvring := os.Getenv("FORMICD_OORT_VALUE_RING")
+	if envoortvring != "" {
+		*oortValueRing = envoortvring
 	}
 
-	envoortghost := os.Getenv("FORMICD_OORT_GROUP_HOST")
-	if envoortghost != "" {
-		*oortGroupHost = envoortghost
+	envoortgring := os.Getenv("FORMICD_OORT_GROUP_RING")
+	if envoortgring != "" {
+		*oortGroupRing = envoortgring
 	}
 
 	envport := os.Getenv("FORMICD_PORT")
@@ -115,23 +115,37 @@ func main() {
 	if err != nil {
 		grpclog.Fatalln("Cannot setup tls config:", err)
 	}
-	// TODO: This all eventually needs to replaced with "real" rings.
-	b := ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{"", "", *oortValueHost}, "", nil)
-	vring := b.Ring()
-	b = ring.NewBuilder(64)
-	b.AddNode(true, 1, nil, []string{"", "", *oortGroupHost}, "", nil)
-	gring := b.Ring()
+
+	// TODO: Next step will be connecting to syndicate to obtain and locally
+	// cache rings.
+	fp, err := os.Open(*oortValueRing)
+	if err != nil {
+		grpclog.Fatalln("Cannot open value ring:", err)
+	}
+	vring, err := ring.LoadRing(fp)
+	if err != nil {
+		grpclog.Fatalln("Cannot load value ring:", err)
+	}
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
 		AddressIndex: 2,
 		GRPCOpts:     []grpc.DialOption{copt},
 	})
 	vstore.SetRing(vring)
+
+	fp, err = os.Open(*oortGroupRing)
+	if err != nil {
+		grpclog.Fatalln("Cannot open group ring:", err)
+	}
+	gring, err := ring.LoadRing(fp)
+	if err != nil {
+		grpclog.Fatalln("Cannot load group ring:", err)
+	}
 	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
 		AddressIndex: 2,
 		GRPCOpts:     []grpc.DialOption{copt},
 	})
 	gstore.SetRing(gring)
+
 	fs, err := NewOortFS(vstore, gstore)
 	if err != nil {
 		grpclog.Fatalln(err)
