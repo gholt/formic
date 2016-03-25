@@ -7,12 +7,12 @@ import (
 	"os"
 	"strconv"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
 	pb "github.com/creiht/formic/proto"
-	"github.com/gholt/ring"
 	"github.com/pandemicsyn/ftls"
 	"github.com/pandemicsyn/oort/api"
 
@@ -24,8 +24,10 @@ var (
 	certFile            = flag.String("cert_file", "/var/lib/formic/server.crt", "The TLS cert file")
 	keyFile             = flag.String("key_file", "/var/lib/formic/server.key", "The TLS key file")
 	port                = flag.Int("port", 8445, "The server port")
-	oortValueRing       = flag.String("oortvaluering", "/var/lib/formic/ring/valuestore.ring", "Location of value store ring file")
-	oortGroupRing       = flag.String("oortgroupring", "/var/lib/formic/ring/groupstore.ring", "Location of value store ring file")
+	oortValueSyndicate  = flag.String("oortvaluesyndicate", "", "Syndicate server for value store information")
+	oortGroupSyndicate  = flag.String("oortgroupsyndicate", "", "Syndicate server for group store information")
+	oortValueRing       = flag.String("oortvaluering", "/var/lib/formic/ring/valuestore.ring", "Location of cached value store ring file")
+	oortGroupRing       = flag.String("oortgroupring", "/var/lib/formic/ring/groupstore.ring", "Location of cached value store ring file")
 	insecureSkipVerify  = flag.Bool("skipverify", false, "don't verify cert")
 	oortClientMutualTLS = flag.Bool("mutualtls", true, "whether or not the server expects mutual tls auth")
 	oortClientCert      = flag.String("oort-client-cert", "/var/lib/formic/client.crt", "cert file to use")
@@ -46,6 +48,16 @@ func main() {
 	envtls := os.Getenv("FORMICD_TLS")
 	if envtls == "true" {
 		*usetls = true
+	}
+
+	envoortvsyndicate := os.Getenv("FORMICD_OORT_VALUE_SYNDICATE")
+	if envoortvsyndicate != "" {
+		*oortValueSyndicate = envoortvsyndicate
+	}
+
+	envoortgsyndicate := os.Getenv("FORMICD_OORT_GROUP_SYNDICATE")
+	if envoortgsyndicate != "" {
+		*oortGroupSyndicate = envoortgsyndicate
 	}
 
 	envoortvring := os.Getenv("FORMICD_OORT_VALUE_RING")
@@ -116,35 +128,27 @@ func main() {
 		grpclog.Fatalln("Cannot setup tls config:", err)
 	}
 
-	// TODO: Next step will be connecting to syndicate to obtain and locally
-	// cache rings.
-	fp, err := os.Open(*oortValueRing)
-	if err != nil {
-		grpclog.Fatalln("Cannot open value ring:", err)
-	}
-	vring, err := ring.LoadRing(fp)
-	if err != nil {
-		grpclog.Fatalln("Cannot load value ring:", err)
-	}
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
-		AddressIndex: 2,
-		GRPCOpts:     []grpc.DialOption{copt},
+		AddressIndex:       2,
+		GRPCOpts:           []grpc.DialOption{copt},
+		RingServer:         *oortValueSyndicate,
+		RingCachePath:      *oortValueRing,
+		RingServerGRPCOpts: []grpc.DialOption{copt},
 	})
-	vstore.SetRing(vring)
+	if err := vstore.Startup(context.Background()); err != nil {
+		grpclog.Fatalln("Cannot start valuestore connector:", err)
+	}
 
-	fp, err = os.Open(*oortGroupRing)
-	if err != nil {
-		grpclog.Fatalln("Cannot open group ring:", err)
-	}
-	gring, err := ring.LoadRing(fp)
-	if err != nil {
-		grpclog.Fatalln("Cannot load group ring:", err)
-	}
 	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
-		AddressIndex: 2,
-		GRPCOpts:     []grpc.DialOption{copt},
+		AddressIndex:       2,
+		GRPCOpts:           []grpc.DialOption{copt},
+		RingServer:         *oortGroupSyndicate,
+		RingCachePath:      *oortGroupRing,
+		RingServerGRPCOpts: []grpc.DialOption{copt},
 	})
-	gstore.SetRing(gring)
+	if err := gstore.Startup(context.Background()); err != nil {
+		grpclog.Fatalln("Cannot start valuestore connector:", err)
+	}
 
 	fs, err := NewOortFS(vstore, gstore)
 	if err != nil {
