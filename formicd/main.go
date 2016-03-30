@@ -15,7 +15,6 @@ import (
 	pb "github.com/creiht/formic/proto"
 	"github.com/pandemicsyn/ftls"
 	"github.com/pandemicsyn/oort/api"
-	"github.com/pandemicsyn/oort/oort"
 
 	"net"
 )
@@ -25,8 +24,8 @@ var (
 	certFile            = flag.String("cert_file", "/var/lib/formic/server.crt", "The TLS cert file")
 	keyFile             = flag.String("key_file", "/var/lib/formic/server.key", "The TLS key file")
 	port                = flag.Int("port", 8445, "The server port")
-	oortValueSyndicate  = flag.String("oortvaluesyndicate", "", "Syndicate server for value store information")
-	oortGroupSyndicate  = flag.String("oortgroupsyndicate", "", "Syndicate server for group store information")
+	oortValueSyndicate  = flag.String("oortvaluesyndicate", "", "Syndicate server for value store information; empty string will use default DNS SRV record")
+	oortGroupSyndicate  = flag.String("oortgroupsyndicate", "", "Syndicate server for group store information; empty string will use default DNS SRV record")
 	oortValueRing       = flag.String("oortvaluering", "/var/lib/formic/ring/valuestore.ring", "Location of cached value store ring file")
 	oortGroupRing       = flag.String("oortgroupring", "/var/lib/formic/ring/groupstore.ring", "Location of cached value store ring file")
 	insecureSkipVerify  = flag.Bool("skipverify", false, "don't verify cert")
@@ -55,24 +54,10 @@ func main() {
 	if envoortvsyndicate != "" {
 		*oortValueSyndicate = envoortvsyndicate
 	}
-	if *oortValueSyndicate == "" {
-		var err error
-		*oortValueSyndicate, err = oort.GenServiceID("value", "syndicate", "tcp")
-		if err != nil {
-			FatalIf(err, "couldn't resolve value store syndicate")
-		}
-	}
 
 	envoortgsyndicate := os.Getenv("FORMICD_OORT_GROUP_SYNDICATE")
 	if envoortgsyndicate != "" {
 		*oortGroupSyndicate = envoortgsyndicate
-	}
-	if *oortGroupSyndicate == "" {
-		var err error
-		*oortGroupSyndicate, err = oort.GenServiceID("group", "syndicate", "tcp")
-		if err != nil {
-			FatalIf(err, "couldn't resolve group store syndicate")
-		}
 	}
 
 	envoortvring := os.Getenv("FORMICD_OORT_VALUE_RING")
@@ -143,12 +128,18 @@ func main() {
 		grpclog.Fatalln("Cannot setup tls config:", err)
 	}
 
+	clientID, _ := os.Hostname()
+	if clientID != "" {
+		clientID += "/formicd"
+	}
+
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
 		AddressIndex:       2,
 		GRPCOpts:           []grpc.DialOption{copt},
 		RingServer:         *oortValueSyndicate,
 		RingCachePath:      *oortValueRing,
 		RingServerGRPCOpts: []grpc.DialOption{copt},
+		RingClientID:       clientID,
 	})
 	if err := vstore.Startup(context.Background()); err != nil {
 		grpclog.Fatalln("Cannot start valuestore connector:", err)
@@ -160,6 +151,7 @@ func main() {
 		RingServer:         *oortGroupSyndicate,
 		RingCachePath:      *oortGroupRing,
 		RingServerGRPCOpts: []grpc.DialOption{copt},
+		RingClientID:       clientID,
 	})
 	if err := gstore.Startup(context.Background()); err != nil {
 		grpclog.Fatalln("Cannot start valuestore connector:", err)
