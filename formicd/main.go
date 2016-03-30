@@ -15,6 +15,7 @@ import (
 	pb "github.com/creiht/formic/proto"
 	"github.com/pandemicsyn/ftls"
 	"github.com/pandemicsyn/oort/api"
+	"github.com/pandemicsyn/oort/oort"
 
 	"net"
 )
@@ -54,10 +55,24 @@ func main() {
 	if envoortvsyndicate != "" {
 		*oortValueSyndicate = envoortvsyndicate
 	}
+	if *oortValueSyndicate == "" {
+		var err error
+		*oortValueSyndicate, err = oort.GenServiceID("value", "syndicate", "tcp")
+		if err != nil {
+			FatalIf(err, "couldn't resolve value store syndicate")
+		}
+	}
 
 	envoortgsyndicate := os.Getenv("FORMICD_OORT_GROUP_SYNDICATE")
 	if envoortgsyndicate != "" {
 		*oortGroupSyndicate = envoortgsyndicate
+	}
+	if *oortGroupSyndicate == "" {
+		var err error
+		*oortGroupSyndicate, err = oort.GenServiceID("group", "syndicate", "tcp")
+		if err != nil {
+			FatalIf(err, "couldn't resolve group store syndicate")
+		}
 	}
 
 	envoortvring := os.Getenv("FORMICD_OORT_VALUE_RING")
