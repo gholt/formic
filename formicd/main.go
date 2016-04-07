@@ -20,7 +20,6 @@ import (
 )
 
 var (
-	usetls              = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
 	certFile            = flag.String("cert_file", "/var/lib/formic/server.crt", "The TLS cert file")
 	keyFile             = flag.String("key_file", "/var/lib/formic/server.key", "The TLS key file")
 	port                = flag.Int("port", 8445, "The server port")
@@ -44,11 +43,6 @@ func FatalIf(err error, msg string) {
 
 func main() {
 	flag.Parse()
-
-	envtls := os.Getenv("FORMICD_TLS")
-	if envtls == "true" {
-		*usetls = true
-	}
 
 	envoortvsyndicate := os.Getenv("FORMICD_OORT_VALUE_SYNDICATE")
 	if envoortvsyndicate != "" {
@@ -111,11 +105,9 @@ func main() {
 	}
 
 	var opts []grpc.ServerOption
-	if *usetls {
-		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
-		FatalIf(err, "Couldn't load cert from file")
-		opts = []grpc.ServerOption{grpc.Creds(creds)}
-	}
+	creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
+	FatalIf(err, "Couldn't load cert from file")
+	opts = []grpc.ServerOption{grpc.Creds(creds)}
 	s := grpc.NewServer(opts...)
 	copt, err := ftls.NewGRPCClientDialOpt(&ftls.Config{
 		MutualTLS:          *oortClientMutualTLS,
