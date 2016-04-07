@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
+	"path"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -19,21 +17,6 @@ import (
 	"net"
 )
 
-var (
-	certFile            = flag.String("cert_file", "/var/lib/formic/server.crt", "The TLS cert file")
-	keyFile             = flag.String("key_file", "/var/lib/formic/server.key", "The TLS key file")
-	port                = flag.Int("port", 8445, "The server port")
-	oortValueSyndicate  = flag.String("oortvaluesyndicate", "", "Syndicate server for value store information; empty string will use default DNS SRV record")
-	oortGroupSyndicate  = flag.String("oortgroupsyndicate", "", "Syndicate server for group store information; empty string will use default DNS SRV record")
-	oortValueRing       = flag.String("oortvaluering", "/var/lib/formic/ring/valuestore.ring", "Location of cached value store ring file")
-	oortGroupRing       = flag.String("oortgroupring", "/var/lib/formic/ring/groupstore.ring", "Location of cached value store ring file")
-	insecureSkipVerify  = flag.Bool("skipverify", false, "don't verify cert")
-	oortClientMutualTLS = flag.Bool("mutualtls", true, "whether or not the server expects mutual tls auth")
-	oortClientCert      = flag.String("oort-client-cert", "/var/lib/formic/client.crt", "cert file to use")
-	oortClientKey       = flag.String("oort-client-key", "/var/lib/formic/client.key", "key file to use")
-	oortClientCA        = flag.String("oort-client-ca", "/var/lib/formic/ca.pem", "ca file to use")
-)
-
 // FatalIf is just a lazy log/panic on error func
 func FatalIf(err error, msg string) {
 	if err != nil {
@@ -42,79 +25,19 @@ func FatalIf(err error, msg string) {
 }
 
 func main() {
-	flag.Parse()
-
-	envoortvsyndicate := os.Getenv("FORMICD_OORT_VALUE_SYNDICATE")
-	if envoortvsyndicate != "" {
-		*oortValueSyndicate = envoortvsyndicate
-	}
-
-	envoortgsyndicate := os.Getenv("FORMICD_OORT_GROUP_SYNDICATE")
-	if envoortgsyndicate != "" {
-		*oortGroupSyndicate = envoortgsyndicate
-	}
-
-	envoortvring := os.Getenv("FORMICD_OORT_VALUE_RING")
-	if envoortvring != "" {
-		*oortValueRing = envoortvring
-	}
-
-	envoortgring := os.Getenv("FORMICD_OORT_GROUP_RING")
-	if envoortgring != "" {
-		*oortGroupRing = envoortgring
-	}
-
-	envport := os.Getenv("FORMICD_PORT")
-	if envport != "" {
-		p, err := strconv.Atoi(envport)
-		if err != nil {
-			log.Println("Did not send valid port from env:", err)
-		} else {
-			*port = p
-		}
-	}
-
-	envcert := os.Getenv("FORMICD_CERT_FILE")
-	if envcert != "" {
-		*certFile = envcert
-	}
-
-	envkey := os.Getenv("FORMICD_KEY_FILE")
-	if envkey != "" {
-		*keyFile = envkey
-	}
-	envSkipVerify := os.Getenv("FORMICD_INSECURE_SKIP_VERIFY")
-	if envSkipVerify == "true" {
-		*insecureSkipVerify = true
-	}
-	envMutualTLS := os.Getenv("FORMICD_MUTUAL_TLS")
-	if envMutualTLS == "true" {
-		*oortClientMutualTLS = true
-	}
-	envClientCA := os.Getenv("FORMICD_CLIENT_CA_FILE")
-	if envClientCA != "" {
-		*oortClientCA = envClientCA
-	}
-	envClientCert := os.Getenv("FORMICD_CLIENT_CERT_FILE")
-	if envClientCert != "" {
-		*oortClientCert = envClientCert
-	}
-	envClientKey := os.Getenv("FORMICD_CLIENT_KEY_FILE")
-	if envClientKey != "" {
-		*oortClientKey = envClientKey
-	}
+	cfg := resolveConfig(nil)
 
 	var opts []grpc.ServerOption
-	creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
+	creds, err := credentials.NewServerTLSFromFile(path.Join(cfg.path, "server.crt"), path.Join(cfg.path, "server.key"))
 	FatalIf(err, "Couldn't load cert from file")
 	opts = []grpc.ServerOption{grpc.Creds(creds)}
 	s := grpc.NewServer(opts...)
 	copt, err := ftls.NewGRPCClientDialOpt(&ftls.Config{
-		MutualTLS:          *oortClientMutualTLS,
-		InsecureSkipVerify: *insecureSkipVerify,
-		CertFile:           *oortClientCert,
-		KeyFile:            *oortClientKey,
-		CAFile:             *oortClientCA,
+		MutualTLS:          !cfg.skipMutualTLS,
+		InsecureSkipVerify: cfg.insecureSkipVerify,
+		CertFile:           path.Join(cfg.path, "client.crt"),
+		KeyFile:            path.Join(cfg.path, "client.key"),
+		CAFile:             path.Join(cfg.path, "ca.pem"),
 	})
 	if err != nil {
 		grpclog.Fatalln("Cannot setup tls config:", err)
@@ -128,8 +51,8 @@ func main() {
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
 		AddressIndex:       2,
 		GRPCOpts:           []grpc.DialOption{copt},
-		RingServer:         *oortValueSyndicate,
-		RingCachePath:      *oortValueRing,
+		RingServer:         cfg.oortValueSyndicate,
+		RingCachePath:      path.Join(cfg.path, "ring/valuestore.ring"),
 		RingServerGRPCOpts: []grpc.DialOption{copt},
 		RingClientID:       clientID,
 	})
@@ -140,8 +63,8 @@ func main() {
 	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
 		AddressIndex:       2,
 		GRPCOpts:           []grpc.DialOption{copt},
-		RingServer:         *oortGroupSyndicate,
-		RingCachePath:      *oortGroupRing,
+		RingServer:         cfg.oortGroupSyndicate,
+		RingCachePath:      path.Join(cfg.path, "ring/groupstore.ring"),
 		RingServerGRPCOpts: []grpc.DialOption{copt},
 		RingClientID:       clientID,
 	})
@@ -153,9 +76,9 @@ func main() {
 	if err != nil {
 		grpclog.Fatalln(err)
 	}
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.port))
 	FatalIf(err, "Failed to bind to port")
 	pb.RegisterApiServer(s, NewApiServer(fs))
-	grpclog.Printf("Starting up on %d...\n", *port)
+	grpclog.Printf("Starting up on %d...\n", cfg.port)
 	s.Serve(l)
 }
