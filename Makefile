@@ -12,7 +12,6 @@ build:
 	go build -i -v -o packaging/root/usr/local/bin/cfs github.com/creiht/formic/cfs
 	go build -i -v -o packaging/root/usr/local/bin/cfsdvp github.com/creiht/formic/cfsdvp
 	go build -i -v -o packaging/root/usr/local/bin/formicd github.com/creiht/formic/formicd
-	go build -i -v -o packaging/root/usr/local/bin/cfswrap github.com/creiht/formic/cfswrap
 
 clean:
 	rm -rf packaging/output
@@ -25,3 +24,4 @@ test:
 	go test ./...
 
 packages: clean deps build deb
+
