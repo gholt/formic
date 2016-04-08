@@ -15,10 +15,8 @@ import (
 	"github.com/gholt/brimtime"
 	"github.com/gholt/store"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pandemicsyn/oort/api"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -53,27 +51,12 @@ type FileService interface {
 var ErrStoreHasNewerValue = errors.New("Error store already has newer value")
 
 type StoreComms struct {
-	vaddr  string
-	gaddr  string
 	vstore store.ValueStore
 	gstore store.GroupStore
 }
 
-func NewStoreComms(vaddr, gaddr string, opts ...grpc.DialOption) (*StoreComms, error) {
-	// TODO: These 10s here are the number of grpc streams the api can make per
-	// request type; should likely be configurable somewhere along the line,
-	// but hardcoded for now.
-	vstore, err := api.NewValueStore(vaddr, 10, opts...)
-	if err != nil {
-		return &StoreComms{}, err
-	}
-	gstore, err := api.NewGroupStore(gaddr, 10, opts...)
-	if err != nil {
-		return &StoreComms{}, err
-	}
+func NewStoreComms(vstore store.ValueStore, gstore store.GroupStore) (*StoreComms, error) {
 	return &StoreComms{
-		vaddr:  vaddr,
-		gaddr:  gaddr,
 		vstore: vstore,
 		gstore: gstore,
 	}, nil
@@ -177,9 +160,9 @@ type OortFS struct {
 	deleteChan chan *DeleteItem
 }
 
-func NewOortFS(vaddr, gaddr string, grpcOpts ...grpc.DialOption) (*OortFS, error) {
+func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error) {
 	// TODO: This all eventually needs to replaced with value and group rings
-	comms, err := NewStoreComms(vaddr, gaddr, grpcOpts...)
+	comms, err := NewStoreComms(vstore, gstore)
 	if err != nil {
 		return &OortFS{}, err
 	}

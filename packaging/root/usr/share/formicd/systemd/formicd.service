@@ -11,7 +11,7 @@ After=syslog.target network.target
 # http://0pointer.de/public/systemd-man/systemd.exec.html
 [Service]
 Type=simple
-EnvironmentFile=/etc/default/formicd
+EnvironmentFile=-/etc/default/formicd
 ExecStart=/root/go/bin/formicd
 
 # it could take a long time to flush data to disk
