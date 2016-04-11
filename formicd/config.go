@@ -6,18 +6,25 @@ import (
 )
 
 type config struct {
-	path               string
-	port               int
-	oortValueSyndicate string
-	oortGroupSyndicate string
-	insecureSkipVerify bool
-	skipMutualTLS      bool
+	cmdCtrlListenAddress string
+	path                 string
+	port                 int
+	oortValueSyndicate   string
+	oortGroupSyndicate   string
+	insecureSkipVerify   bool
+	skipMutualTLS        bool
 }
 
 func resolveConfig(c *config) *config {
 	cfg := &config{}
 	if c != nil {
 		*cfg = *c
+	}
+	if env := os.Getenv("FORMICD_CMDCTRL_LISTEN_ADDRESS"); env != "" {
+		cfg.cmdCtrlListenAddress = env
+	}
+	if cfg.cmdCtrlListenAddress == "" {
+		cfg.cmdCtrlListenAddress = "0.0.0.0:4446"
 	}
 	if env := os.Getenv("FORMICD_PATH"); env != "" {
 		cfg.path = env
