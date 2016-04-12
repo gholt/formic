@@ -5,8 +5,9 @@
 
 ## Command line format and required options
 
-    cfs device path_to_mount_point  -o [MOUNT OPTIONS]
+    cfs [mount] device path_to_mount_point  -o [MOUNT OPTIONS]
       Command line arguments are positional
+        command                 "mount" is required
         device                  is currently not used
         path_to_mount_point     is required
         -o [List of Options]    the -o is required
