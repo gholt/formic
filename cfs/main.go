@@ -500,20 +500,22 @@ func main() {
 					fmt.Printf("Invalid region %s", u.Scheme)
 					os.Exit(1)
 				}
-				fsNum = u.Host
+				if u.Host == "" {
+					fmt.Printf("File System id is required")
+					os.Exit(1)
+				}
+				fsnum := u.Host
 				mountpoint := c.Args().Get(1)
 				// check mountpoint exists
 				if _, ferr := os.Stat(mountpoint); os.IsNotExist(ferr) {
 					log.Printf("Mount point %s does not exist\n\n", mountpoint)
 					os.Exit(1)
 				}
+				fmt.Println("run fusermountPath")
 				fusermountPath()
-				if u.Scheme == "aio0" {
-					serverAddr = "127.0.0.1:8443"
-				}
 				// process file system options
 				clargs := getArgs(c.String("o"))
-
+				fmt.Println(clargs)
 				// crapy debug log handling :)
 				if debug, ok := clargs["debug"]; ok {
 					if debug == "false" {
@@ -525,6 +527,7 @@ func main() {
 					log.SetOutput(ioutil.Discard)
 				}
 				// Setup grpc
+				fmt.Println("Setting up grpc")
 				var opts []grpc.DialOption
 				creds := credentials.NewTLS(&tls.Config{
 					InsecureSkipVerify: true,
@@ -536,6 +539,7 @@ func main() {
 				}
 				defer conn.Close()
 				// Work with fuse
+				fmt.Println("Work with fuse")
 				cfs, err := fuse.Mount(
 					mountpoint,
 					fuse.FSName("cfs"),
@@ -553,6 +557,9 @@ func main() {
 				rpc := newrpc(conn)
 				fs := newfs(cfs, rpc)
 				srv := newserver(fs)
+
+				// Verify fsnum and ip
+				fmt.Printf("Verify that file system %s with ip %s ", fsnum, "127.0.0.1")
 
 				if err := srv.serve(); err != nil {
 					log.Fatal(err)
