@@ -97,13 +97,6 @@ func main() {
 			EnvVar:      "OOHHC_TOKEN_KEY",
 			Destination: &token,
 		},
-		cli.StringFlag{
-			Name:        "server, s",
-			Value:       "api.ea.iad3.rackfs.com:8443",
-			Usage:       "Address of the oohhc-acctd server",
-			EnvVar:      "OOHHC_FILESYS_SERVER_ADDR",
-			Destination: &serverAddr,
-		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -160,6 +153,14 @@ func main() {
 					fmt.Printf("Url parse error: %v", err)
 					os.Exit(1)
 				}
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				fmt.Println(u.Scheme)
 				acctNum = u.Host
 				if u.Path != "" {
@@ -200,6 +201,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				if u.Path != "" {
 					fmt.Println("Invaid url")
@@ -235,6 +244,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
 				conn := setupWS(serverAddr)
@@ -279,6 +296,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
 				if c.String("name") != "" && !validAcctName(c.String("name")) {
@@ -331,6 +356,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
 				conn := setupWS(serverAddr)
@@ -374,6 +407,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
 				conn := setupWS(serverAddr)
@@ -451,6 +492,14 @@ func main() {
 					os.Exit(1)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				fsNum = u.Host
 				mountpoint := c.Args().Get(1)
 				// check mountpoint exists
