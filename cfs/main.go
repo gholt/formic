@@ -559,6 +559,14 @@ func main() {
 				srv := newserver(fs)
 
 				// Verify fsnum and ip
+				// 1. Get local IP Address
+				// 2. Check for valid filesystem
+				// 		query group store
+				//			"/fs"    "[fsnum]"
+				// 3. Check for valid ip
+				//		query group store
+				//			"/fs/[fsnum]/addr"		"[ipaddress]"
+
 				fmt.Printf("Verify that file system %s with ip %s ", fsnum, "127.0.0.1")
 
 				if err := srv.serve(); err != nil {
