@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"strconv"
 )
@@ -34,10 +35,12 @@ func resolveConfig(c *config) *config {
 		cfg.port = 8445
 	}
 	if env := os.Getenv("FORMICD_OORT_VALUE_SYNDICATE"); env != "" {
+		log.Println("Value: ", env)
 		cfg.oortValueSyndicate = env
 	}
 	// cfg.oortValueSyndicate == "" means default SRV resolution.
 	if env := os.Getenv("FORMICD_OORT_GROUP_SYNDICATE"); env != "" {
+		log.Println("Group: ", env)
 		cfg.oortGroupSyndicate = env
 	}
 	// cfg.oortGroupSyndicate == "" means default SRV resolution.

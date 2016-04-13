@@ -173,7 +173,7 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 	// TODO: This should be setup out of band when an FS is first created
 	// NOTE: This also means that it is only single user until we init filesystems out of band
 	// Init the root node
-	id := GetID(1, 1, 0)
+	id := GetID([]byte("1"), 1, 0)
 	// TODO: The context.Background() calls likely need to be replaced with
 	// actual contexts having a timeouts.
 	n, err := o.GetChunk(context.Background(), id)
@@ -184,7 +184,7 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 			Version: InodeEntryVersion,
 			Inode:   1,
 			IsDir:   true,
-			FsId:    1,
+			FsId:    []byte("1"),
 		}
 		ts := time.Now().Unix()
 		r.Attr = &pb.Attr{
@@ -432,7 +432,7 @@ func (o *OortFS) Remove(ctx context.Context, parent []byte, name string) (int32,
 	tsm := brimtime.TimeToUnixMicro(time.Now())
 	t.Dtime = tsm
 	t.Qtime = tsm
-	t.FsId = 1 // TODO: Make sure this gets set when we are tracking fsids
+	t.FsId = []byte("1") // TODO: Make sure this gets set when we are tracking fsids
 	inode, err := o.GetInode(ctx, d.Id)
 	if err != nil {
 		return 1, err
