@@ -13,6 +13,7 @@ type config struct {
 	oortGroupSyndicate string
 	insecureSkipVerify bool
 	skipMutualTLS      bool
+	nodeId             int
 }
 
 func resolveConfig(c *config) *config {
@@ -50,5 +51,11 @@ func resolveConfig(c *config) *config {
 	if env := os.Getenv("FORMICD_SKIP_MUTUAL_TLS"); env == "true" {
 		cfg.skipMutualTLS = true
 	}
+	if env := os.Getenv("FORMICD_NODE_ID"); env != "" {
+		if val, err := strconv.Atoi(env); err == nil {
+			cfg.nodeId = val
+		}
+	}
+
 	return cfg
 }

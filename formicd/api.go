@@ -21,11 +21,12 @@ type apiServer struct {
 	blocksize int64
 }
 
-func NewApiServer(fs FileService) *apiServer {
+func NewApiServer(fs FileService, nodeId int) *apiServer {
 	s := new(apiServer)
 	s.fs = fs
 	// TODO: Get epoch and node id from some config
-	s.fl = flother.NewFlother(time.Time{}, 1)
+	log.Println("NodeID: ", nodeId)
+	s.fl = flother.NewFlother(time.Time{}, uint64(nodeId))
 	s.blocksize = int64(1024 * 64) // Default Block Size (64K)
 	return s
 }

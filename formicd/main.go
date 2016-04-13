@@ -78,7 +78,7 @@ func main() {
 	}
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.port))
 	FatalIf(err, "Failed to bind to port")
-	pb.RegisterApiServer(s, NewApiServer(fs))
+	pb.RegisterApiServer(s, NewApiServer(fs, cfg.nodeId))
 	grpclog.Printf("Starting up on %d...\n", cfg.port)
 	s.Serve(l)
 }
