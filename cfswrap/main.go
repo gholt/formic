@@ -26,8 +26,10 @@ func main() {
 
 	// Set the path to cfs
 	path := "/root/go/bin/cfs"
+	cfscmd := "mount"
 
 	// Working with command line arguments to pass them thru to cfs
+	clargs = append([]string{path}, cfscmd)
 	clargs = append([]string{path}, flag.Args()...)
 
 	// The Credential fields are used to set UID, GID and attitional GIDS of the process
