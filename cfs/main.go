@@ -314,7 +314,7 @@ func main() {
 				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
-				if c.String("name") != "" && !validAcctName(c.String("name")) {
+				if c.String("name") != "" {
 					fmt.Printf("Invalid File System String: %q\n", c.String("name"))
 					os.Exit(1)
 				}
@@ -519,11 +519,9 @@ func main() {
 					log.Printf("Mount point %s does not exist\n\n", mountpoint)
 					os.Exit(1)
 				}
-				fmt.Println("run fusermountPath")
 				fusermountPath()
 				// process file system options
 				clargs := getArgs(c.String("o"))
-				fmt.Println(clargs)
 				// crapy debug log handling :)
 				if debug, ok := clargs["debug"]; ok {
 					if debug == "false" {
@@ -535,7 +533,6 @@ func main() {
 					log.SetOutput(ioutil.Discard)
 				}
 				// Setup grpc
-				fmt.Println("Setting up grpc")
 				var opts []grpc.DialOption
 				creds := credentials.NewTLS(&tls.Config{
 					InsecureSkipVerify: true,
@@ -547,7 +544,6 @@ func main() {
 				}
 				defer conn.Close()
 				// Work with fuse
-				fmt.Println("Work with fuse")
 				cfs, err := fuse.Mount(
 					mountpoint,
 					fuse.FSName("cfs"),
@@ -636,12 +632,6 @@ func fusermountPath() {
 		// fusermount is in /bin
 		os.Setenv("PATH", "/bin")
 	}
-}
-
-// Validate the account string passed in from the command line
-func validAcctName(a string) bool {
-	//TODO: Determine what needs to be done to validate
-	return true
 }
 
 // setupWS ...
