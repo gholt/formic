@@ -169,7 +169,6 @@ func main() {
 					fmt.Printf("Invalid region %s", u.Scheme)
 					os.Exit(1)
 				}
-				fmt.Println(u.Scheme)
 				acctNum = u.Host
 				if u.Path != "" {
 					fmt.Println("Invalid url scheme")
