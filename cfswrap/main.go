@@ -6,7 +6,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"syscall"
@@ -22,15 +21,16 @@ func main() {
 
 	var clargs []string
 	// Parsing command line arguments
-	flag.Parse()
 
 	// Set the path to cfs
-	path := "/root/go/bin/cfs"
+	path := "/usr/local/bin/cfs"
 	cfscmd := "mount"
 
 	// Working with command line arguments to pass them thru to cfs
 	clargs = append([]string{path}, cfscmd)
-	clargs = append([]string{path}, flag.Args()...)
+	clargs = append([]string{path}, os.Args...)
+
+	fmt.Println(clargs)
 
 	// The Credential fields are used to set UID, GID and attitional GIDS of the process
 	// You need to run the program as  root to do this
