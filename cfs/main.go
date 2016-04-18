@@ -18,6 +18,7 @@ import (
 	mb "github.com/letterj/oohhc/proto/filesystem"
 
 	"bazil.org/fuse"
+	"github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -511,7 +512,10 @@ func main() {
 					fmt.Printf("File System id is required")
 					os.Exit(1)
 				}
-				fsnum := u.Host
+				fsnum, err := uuid.FromString(u.Host)
+				if err != nil {
+					fmt.Print("File System id is not valid: ", err)
+				}
 				mountpoint := c.Args().Get(1)
 				// check mountpoint exists
 				if _, ferr := os.Stat(mountpoint); os.IsNotExist(ferr) {
@@ -558,7 +562,7 @@ func main() {
 				defer cfs.Close()
 
 				rpc := newrpc(conn)
-				fs := newfs(cfs, rpc)
+				fs := newfs(cfs, rpc, fsnum.String())
 				srv := newserver(fs)
 
 				// Verify fsnum and ip
