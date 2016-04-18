@@ -23,7 +23,7 @@ func main() {
 	// Parsing command line arguments
 
 	// Set the path to cfs
-	path := "/root/go/bin/cfs"
+	path := "/usr/local/bin/cfs"
 	cfscmd := "mount"
 
 	// Working with command line arguments to pass them thru to cfs
