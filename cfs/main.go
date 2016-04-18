@@ -501,7 +501,7 @@ func main() {
 				}
 				fmt.Println(u.Scheme)
 				if u.Scheme == "aio" {
-					serverAddr = "127.0.0.1:8448"
+					serverAddr = "127.0.0.1:8445"
 				} else if u.Scheme == "iad" {
 					serverAddr = "api.ea.iad3.rackfs.com:8443"
 				} else {
@@ -575,7 +575,7 @@ func main() {
 				//		query group store
 				//			"/fs/[fsnum]/addr"		"[ipaddress]"
 
-				fmt.Printf("Verify that file system %s with ip %s ", fsnum, "127.0.0.1")
+				fmt.Printf("Verify that file system %s with ip %s \n", fsnum, "127.0.0.1")
 
 				if err := srv.serve(); err != nil {
 					log.Fatal(err)
