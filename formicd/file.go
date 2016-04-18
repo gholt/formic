@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	"bazil.org/fuse"
 
 	pb "github.com/creiht/formic/proto"
@@ -214,6 +216,8 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 }
 
 func (o *OortFS) GetAttr(ctx context.Context, id []byte) (*pb.Attr, error) {
+	md, _ := metadata.FromContext(ctx)
+	log.Print("FSID: ", md["fsid"])
 	b, err := o.GetChunk(ctx, id)
 	if err != nil {
 		return &pb.Attr{}, err
