@@ -115,6 +115,14 @@ func main() {
 					panic(err)
 				}
 				fmt.Println(u.Scheme)
+				if u.Scheme == "aio" {
+					serverAddr = "127.0.0.1:8448"
+				} else if u.Scheme == "iad" {
+					serverAddr = "api.ea.iad3.rackfs.com:8443"
+				} else {
+					fmt.Printf("Invalid region %s", u.Scheme)
+					os.Exit(1)
+				}
 				acctNum = u.Host
 				fsNum = u.Path[1:]
 				conn := setupWS(serverAddr)
