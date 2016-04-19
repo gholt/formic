@@ -2,14 +2,16 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"hash"
 	"hash/crc32"
 	"log"
+	"net"
 	"os"
 	"sort"
 	"time"
 
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 
 	"bazil.org/fuse"
 
@@ -28,6 +30,7 @@ const (
 )
 
 type FileService interface {
+	InitFs(ctx context.Context, fsid []byte) error
 	GetAttr(ctx context.Context, id []byte) (*pb.Attr, error)
 	SetAttr(ctx context.Context, id []byte, attr *pb.Attr, valid uint32) (*pb.Attr, error)
 	Create(ctx context.Context, parent, id []byte, inode uint64, name string, attr *pb.Attr, isdir bool) (string, *pb.Attr, error)
@@ -172,21 +175,61 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 		hasher: crc32.NewIEEE,
 		comms:  comms,
 	}
-	// TODO: This should be setup out of band when an FS is first created
-	// NOTE: This also means that it is only single user until we init filesystems out of band
-	// Init the root node
-	id := GetID([]byte("1"), 1, 0)
+	// TODO: How big should the chan be, or should we have another in memory queue that feeds the chan?
+	o.deleteChan = make(chan *DeleteItem, 1000)
+	deletes := newDeletinator(o.deleteChan, o)
+	go deletes.run()
+	return o, nil
+}
+
+func (o *OortFS) validateIP(ctx context.Context) (bool, error) {
+	fsid, err := GetFsId(ctx)
+	if err != nil {
+		return false, err
+	}
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return false, errors.New("Couldn't get client IP")
+	}
+	ip, _, err := net.SplitHostPort(p.Addr.String())
+	if err != nil {
+		return false, err
+	}
+
+	_, err = o.comms.ReadGroupItem(ctx, []byte(fmt.Sprintf("/fs/%s/addr", fsid.String())), []byte(ip))
+	if store.IsNotFound(err) {
+		log.Println("Invalid IP: ", ip)
+		// No access
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (o *OortFS) InitFs(ctx context.Context, fsid []byte) error {
+	v, err := o.validateIP(ctx)
+	if err != nil {
+		return err
+	}
+	if !v {
+		return errors.New("Unknown or unauthorized FS use")
+	}
 	// TODO: The context.Background() calls likely need to be replaced with
 	// actual contexts having a timeouts.
+	id := GetID(fsid, 1, 0)
 	n, err := o.GetChunk(context.Background(), id)
 	if len(n) == 0 {
-		log.Println("Root node not found, creating new root")
+		log.Println("Creating new root at ", id)
 		// Need to create the root node
 		r := &pb.InodeEntry{
 			Version: InodeEntryVersion,
 			Inode:   1,
 			IsDir:   true,
-			FsId:    []byte("1"),
+			FsId:    fsid,
 		}
 		ts := time.Now().Unix()
 		r.Attr = &pb.Attr{
@@ -201,23 +244,24 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 		}
 		b, err := proto.Marshal(r)
 		if err != nil {
-			return &OortFS{}, err
+			return err
 		}
 		err = o.WriteChunk(context.Background(), id, b)
 		if err != nil {
-			return &OortFS{}, err
+			return err
 		}
 	}
-	// TODO: How big should the chan be, or should we have another in memory queue that feeds the chan?
-	o.deleteChan = make(chan *DeleteItem, 1000)
-	deletes := newDeletinator(o.deleteChan, o)
-	go deletes.run()
-	return o, nil
+	return nil
 }
 
 func (o *OortFS) GetAttr(ctx context.Context, id []byte) (*pb.Attr, error) {
-	md, _ := metadata.FromContext(ctx)
-	log.Print("FSID: ", md["fsid"])
+	v, err := o.validateIP(ctx)
+	if err != nil {
+		return &pb.Attr{}, err
+	}
+	if !v {
+		return &pb.Attr{}, errors.New("Unknown or unauthorized FS use")
+	}
 	b, err := o.GetChunk(ctx, id)
 	if err != nil {
 		return &pb.Attr{}, err
