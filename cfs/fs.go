@@ -197,6 +197,12 @@ func (f *fs) getContext() context.Context {
 	return c
 }
 
+func (f *fs) InitFs() error {
+	log.Println("Inside InitFs")
+	_, err := f.rpc.api.InitFs(f.getContext(), &pb.InitFsRequest{})
+	return err
+}
+
 func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 	log.Println("Inside handleGetattr")
 	log.Println(r)
