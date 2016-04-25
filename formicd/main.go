@@ -74,6 +74,7 @@ func main() {
 
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
 		AddressIndex:       2,
+		StoreFTLSConfig:    tlsConfig,
 		GRPCOpts:           cOpts,
 		RingServer:         cfg.oortValueSyndicate,
 		RingCachePath:      path.Join(cfg.path, "ring/valuestore.ring"),
@@ -86,6 +87,7 @@ func main() {
 
 	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
 		AddressIndex:       2,
+		StoreFTLSConfig:    tlsConfig,
 		GRPCOpts:           cOpts,
 		RingServer:         cfg.oortGroupSyndicate,
 		RingCachePath:      path.Join(cfg.path, "ring/groupstore.ring"),
