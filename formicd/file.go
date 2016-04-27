@@ -163,6 +163,7 @@ type OortFS struct {
 	hasher     func() hash.Hash32
 	comms      *StoreComms
 	deleteChan chan *DeleteItem
+	validIps   map[string]bool
 }
 
 func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error) {
@@ -172,8 +173,9 @@ func NewOortFS(vstore store.ValueStore, gstore store.GroupStore) (*OortFS, error
 		return &OortFS{}, err
 	}
 	o := &OortFS{
-		hasher: crc32.NewIEEE,
-		comms:  comms,
+		hasher:   crc32.NewIEEE,
+		comms:    comms,
+		validIps: make(map[string]bool),
 	}
 	// TODO: How big should the chan be, or should we have another in memory queue that feeds the chan?
 	o.deleteChan = make(chan *DeleteItem, 1000)
@@ -196,6 +198,11 @@ func (o *OortFS) validateIP(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	// First check the cache
+	valid, ok := o.validIps[ip]
+	if ok && valid {
+		return true, nil
+	}
 	fsid, err := GetFsId(ctx)
 	if err != nil {
 		return false, err
@@ -211,6 +218,8 @@ func (o *OortFS) validateIP(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
+	// Cache the valid ip
+	o.validIps[ip] = true
 	return true, nil
 }
 
@@ -691,6 +700,9 @@ func (o *OortFS) Setxattr(ctx context.Context, id []byte, name string, value []b
 	if err != nil {
 		return &pb.SetxattrResponse{}, err
 	}
+	if n.Xattr == nil {
+		n.Xattr = make(map[string][]byte)
+	}
 	n.Xattr[name] = value
 	b, err = proto.Marshal(n)
 	if err != nil {
@@ -767,15 +779,6 @@ func (o *OortFS) Rename(ctx context.Context, oldParent, newParent []byte, oldNam
 	if !v {
 		return nil, errors.New("Unknown or unauthorized FS use")
 	}
-	// Check if the new name already exists
-	id, err := o.comms.ReadGroupItem(ctx, newParent, []byte(newName))
-	if err != nil && !store.IsNotFound(err) {
-		// TODO: Needs beter error handling
-		return &pb.RenameResponse{}, err
-	}
-	if len(id) > 0 { // New name already exists
-		return &pb.RenameResponse{}, nil
-	}
 	// Get the ID from the group list
 	b, err := o.comms.ReadGroupItem(ctx, oldParent, []byte(oldName))
 	if store.IsNotFound(err) {
@@ -789,16 +792,19 @@ func (o *OortFS) Rename(ctx context.Context, oldParent, newParent []byte, oldNam
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
-	// Delete old entry
-	err = o.comms.DeleteGroupItem(ctx, oldParent, []byte(oldName))
-	if err != nil {
-		return &pb.RenameResponse{}, err
-	}
+	// TODO: Handle orphaned data from overwrites
 	// Create new entry
 	d.Name = newName
 	b, err = proto.Marshal(d)
 	err = o.comms.WriteGroup(ctx, newParent, []byte(newName), b)
 	if err != nil {
+		return &pb.RenameResponse{}, err
+	}
+	// Delete old entry
+	err = o.comms.DeleteGroupItem(ctx, oldParent, []byte(oldName))
+	if err != nil {
+		// TODO: Handle errors
+		// If we fail here then we will have two entries
 		return &pb.RenameResponse{}, err
 	}
 	return &pb.RenameResponse{}, nil
