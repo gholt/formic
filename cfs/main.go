@@ -565,7 +565,6 @@ func parseurl(urlstr string, port string) (string, string, string) {
 		fmt.Println("Invalid URL no account or file system id")
 		os.Exit(1)
 	}
-	fmt.Println(srv)
 	if u.Path != "" {
 		return srv, u.Host, u.Path[1:]
 	}
