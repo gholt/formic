@@ -395,7 +395,7 @@ func main() {
 		{
 			Name:      "mount",
 			Usage:     "mount a file system",
-			ArgsUsage: "<region>://<file system uuid> <[mount point> -o [OPTIONS]",
+			ArgsUsage: "<region>://<file system uuid> <mount point> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "o",
