@@ -554,7 +554,7 @@ func parseurl(urlstr string) (string, string, string) {
 	}
 	switch u.Scheme {
 	case "aio":
-		srv = "127.0.0.1:8448"
+		srv = "127.0.0.1:8445"
 	case "iad":
 		srv = "api.ea.iad.rackfs.com:8448"
 	default:
