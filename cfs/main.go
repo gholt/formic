@@ -113,7 +113,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -151,7 +151,7 @@ func main() {
 					fmt.Println("Token is required")
 				}
 				// For create serverAddr and acctnum are required
-				serverAddr, acctNum, _ = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, _ = parseurl(c.Args().Get(0), "8448")
 				if c.String("name") == "" {
 					fmt.Println("File system name is a required field.")
 					os.Exit(1)
@@ -182,7 +182,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, _ = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, _ = parseurl(c.Args().Get(0), "8448")
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
 				result, err := ws.ListFS(context.Background(), &mb.ListFSRequest{Acctnum: acctNum, Token: token})
@@ -208,7 +208,7 @@ func main() {
 				if token == "" {
 					fmt.Println("Token is required")
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -251,7 +251,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -301,7 +301,7 @@ func main() {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -342,7 +342,7 @@ func main() {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0))
+				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -379,7 +379,7 @@ func main() {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
-				serverAddr, fsNum, _ = parseurl(c.Args().Get(0))
+				serverAddr, fsNum, _ = parseurl(c.Args().Get(0), "8448")
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
 				result, err := ws.LookupAddrFS(context.Background(), &mb.LookupAddrFSRequest{FSid: fsNum, Addr: c.String("addr")})
@@ -408,7 +408,7 @@ func main() {
 					fmt.Println("Invalid syntax for revoke.")
 					os.Exit(1)
 				}
-				serverAddr, fsNum, _ = parseurl(c.Args().Get(0))
+				serverAddr, fsNum, _ = parseurl(c.Args().Get(0), "8445")
 				fsnum, err := uuid.FromString(fsNum)
 				if err != nil {
 					fmt.Print("File System id is not valid: ", err)
@@ -544,7 +544,7 @@ func setupWS(svr string) *grpc.ClientConn {
 }
 
 // parseurl ...
-func parseurl(urlstr string) (string, string, string) {
+func parseurl(urlstr string, port string) (string, string, string) {
 	// a = string of arguments
 	var srv string
 	u, err := url.Parse(urlstr)
@@ -554,9 +554,9 @@ func parseurl(urlstr string) (string, string, string) {
 	}
 	switch u.Scheme {
 	case "aio":
-		srv = "127.0.0.1:8445"
+		srv = fmt.Sprintf("127.0.0.1:%s", port)
 	case "iad":
-		srv = "api.ea.iad.rackfs.com:8448"
+		srv = fmt.Sprintf("api.ea.iad.rackfs.com:%s", port)
 	default:
 		fmt.Printf("Invalid region %s\n", u.Scheme)
 		os.Exit(1)
@@ -565,7 +565,6 @@ func parseurl(urlstr string) (string, string, string) {
 		fmt.Println("Invalid URL no account or file system id")
 		os.Exit(1)
 	}
-	fmt.Println(srv)
 	if u.Path != "" {
 		return srv, u.Host, u.Path[1:]
 	}
