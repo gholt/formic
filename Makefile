@@ -17,6 +17,10 @@ build:
 		-X main.buildDate=$(shell date -u +%Y-%m-%d.%H:%M:%S)" github.com/creiht/formic/formicd
 	go build -i -v -o packaging/root/usr/local/bin/cfswrap github.com/creiht/formic/cfswrap
 
+darwin: export GOOS=darwin
+darwin:
+	GOOS=darwin go build -i -v -o packaging/root/usr/local/bin/cfs.osx github.com/creiht/formic/cfs
+
 clean:
 	rm -rf packaging/output
 	rm -f packaging/root/usr/local/bin
