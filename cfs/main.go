@@ -103,7 +103,7 @@ func main() {
 		{
 			Name:      "show",
 			Usage:     "Show a File Systems",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid>",
 			Action: func(c *cli.Context) {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for show.")
@@ -134,7 +134,7 @@ func main() {
 		{
 			Name:      "create",
 			Usage:     "Create a File Systems",
-			ArgsUsage: "[region]://[account uuid] -N [file system name]",
+			ArgsUsage: "<region>://<account uuid> -N <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "name, N",
@@ -172,7 +172,7 @@ func main() {
 		{
 			Name:      "list",
 			Usage:     "List File Systems for an account",
-			ArgsUsage: "[region]://[account uuid]",
+			ArgsUsage: "<region>://<account uuid>",
 			Action: func(c *cli.Context) {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for list.")
@@ -199,7 +199,7 @@ func main() {
 		{
 			Name:      "delete",
 			Usage:     "Delete a File Systems",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid>",
 			Action: func(c *cli.Context) {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for delete.")
@@ -229,7 +229,7 @@ func main() {
 		{
 			Name:      "update",
 			Usage:     "Update a File Systems",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid] [OPTIONS]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "name, N",
@@ -280,7 +280,7 @@ func main() {
 		{
 			Name:      "grant",
 			Usage:     "Grant an Addr access to a File Systems",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid] -addr [IP Address]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "addr",
@@ -321,7 +321,7 @@ func main() {
 		{
 			Name:      "revoke",
 			Usage:     "Revoke an Addr's access to a File Systems",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid] -addr [IP Address]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "addr",
@@ -362,7 +362,7 @@ func main() {
 		{
 			Name:      "verify",
 			Usage:     "Verify an Addr has access to a file system",
-			ArgsUsage: "[region]://[account uuid]/[file system uuid] -addr [IP Address]",
+			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "addr",
@@ -395,7 +395,7 @@ func main() {
 		{
 			Name:      "mount",
 			Usage:     "mount a file system",
-			ArgsUsage: "[region]://[file system uuid] [mount point] -o [OPTIONS]",
+			ArgsUsage: "<region>://<file system uuid> <[mount point> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "o",
