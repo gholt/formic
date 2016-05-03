@@ -426,6 +426,7 @@ func main() {
 				}
 				fusermountPath()
 				// process file system options
+				allowOther := false
 				if c.String("o") != "" {
 					clargs := getArgs(c.String("o"))
 					// crapy debug log handling :)
@@ -438,6 +439,7 @@ func main() {
 						log.SetFlags(0)
 						log.SetOutput(ioutil.Discard)
 					}
+					_, allowOther = clargs["allow_other"]
 				}
 				// Setup grpc
 				var opts []grpc.DialOption
@@ -451,16 +453,30 @@ func main() {
 				}
 				defer conn.Close()
 				// Work with fuse
-				cfs, err := fuse.Mount(
-					mountpoint,
-					fuse.FSName("cfs"),
-					fuse.Subtype("cfs"),
-					fuse.LocalVolume(),
-					fuse.VolumeName("CFS"),
-					//fuse.AllowOther(),
-					fuse.DefaultPermissions(),
-					fuse.MaxReadahead(64*1024),
-				)
+				var cfs *fuse.Conn
+				// TODO: Make setting the fuse config cleaner
+				if allowOther {
+					cfs, err = fuse.Mount(
+						mountpoint,
+						fuse.FSName("cfs"),
+						fuse.Subtype("cfs"),
+						fuse.LocalVolume(),
+						fuse.VolumeName("CFS"),
+						fuse.AllowOther(),
+						fuse.DefaultPermissions(),
+						fuse.MaxReadahead(64*1024),
+					)
+				} else {
+					cfs, err = fuse.Mount(
+						mountpoint,
+						fuse.FSName("cfs"),
+						fuse.Subtype("cfs"),
+						fuse.LocalVolume(),
+						fuse.VolumeName("CFS"),
+						fuse.DefaultPermissions(),
+						fuse.MaxReadahead(64*1024),
+					)
+				}
 				if err != nil {
 					log.Fatal(err)
 				}
