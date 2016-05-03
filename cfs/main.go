@@ -18,6 +18,7 @@ import (
 	mb "github.com/letterj/oohhc/proto/filesystem"
 
 	"bazil.org/fuse"
+	"github.com/pkg/profile"
 	"github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -79,6 +80,10 @@ type NullWriter int
 func (NullWriter) Write([]byte) (int, error) { return 0, nil }
 
 func main() {
+
+	if gogoprofile := os.Getenv("CFS_PROFILE"); gogoprofile == "true" {
+		defer profile.Start(profile.MemProfile).Stop()
+	}
 
 	// Process command line arguments
 	var token string
