@@ -457,8 +457,9 @@ func main() {
 					fuse.Subtype("cfs"),
 					fuse.LocalVolume(),
 					fuse.VolumeName("CFS"),
-					fuse.AllowOther(),
+					//fuse.AllowOther(),
 					fuse.DefaultPermissions(),
+					fuse.MaxReadahead(64*1024),
 				)
 				if err != nil {
 					log.Fatal(err)
