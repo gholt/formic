@@ -464,7 +464,7 @@ func main() {
 						fuse.VolumeName("CFS"),
 						fuse.AllowOther(),
 						fuse.DefaultPermissions(),
-						fuse.MaxReadahead(64*1024),
+						//fuse.MaxReadahead(64*1024),
 					)
 				} else {
 					cfs, err = fuse.Mount(
@@ -474,7 +474,7 @@ func main() {
 						fuse.LocalVolume(),
 						fuse.VolumeName("CFS"),
 						fuse.DefaultPermissions(),
-						fuse.MaxReadahead(64*1024),
+						//fuse.MaxReadahead(64*1024),
 					)
 				}
 				if err != nil {
