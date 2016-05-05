@@ -161,6 +161,15 @@ func (o *StoreComms) LookupGroup(ctx context.Context, key []byte) ([]store.Looku
 	return items, nil
 }
 
+func (o *StoreComms) ReadGroup(ctx context.Context, key []byte) ([]store.ReadGroupItem, error) {
+	keyA, keyB := murmur3.Sum128(key)
+	items, err := o.gstore.ReadGroup(ctx, keyA, keyB)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 type OortFS struct {
 	hasher     func() hash.Hash32
 	comms      *StoreComms
@@ -454,7 +463,7 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 		return nil, errors.New("Unknown or unauthorized FS use")
 	}
 	// Get the keys from the group
-	items, err := o.comms.LookupGroup(ctx, id)
+	items, err := o.comms.ReadGroup(ctx, id)
 	log.Println("ITEMS: ", items)
 	if err != nil {
 		// TODO: Needs beter error handling
@@ -466,13 +475,12 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 	dirent := &pb.DirEntry{}
 	for _, item := range items {
 		// lookup the item in the group to get the id
-		b, err := o.comms.ReadGroupItemByKey(ctx, id, item.ChildKeyA, item.ChildKeyB)
 		if err != nil {
 			// TODO: Needs beter error handling
 			log.Println("Error with lookup: ", err)
 			continue
 		}
-		err = proto.Unmarshal(b, dirent)
+		err = proto.Unmarshal(item.Value, dirent)
 		if err != nil {
 			return &pb.ReadDirAllResponse{}, err
 		}
@@ -481,7 +489,7 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 			continue
 		}
 		// get the inode entry
-		b, err = o.GetChunk(ctx, dirent.Id)
+		b, err := o.GetChunk(ctx, dirent.Id)
 		if err != nil {
 			continue
 		}
