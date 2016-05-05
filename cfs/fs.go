@@ -210,7 +210,7 @@ func (f *fs) handleGetattr(r *fuse.GetattrRequest) {
 
 	a, err := f.rpc.api.GetAttr(f.getContext(), &pb.GetAttrRequest{Inode: uint64(r.Node)})
 	if err != nil {
-		log.Println("GetAttr fail: %v", err)
+		log.Printf("GetAttr fail: %s", err)
 		r.RespondError(fuse.EIO)
 		return
 	}
