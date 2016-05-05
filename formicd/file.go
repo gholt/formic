@@ -15,6 +15,7 @@ import (
 
 	"bazil.org/fuse"
 
+	"github.com/creiht/formic"
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
 	"github.com/gholt/store"
@@ -231,7 +232,7 @@ func (o *OortFS) InitFs(ctx context.Context, fsid []byte) error {
 	if !v {
 		return errors.New("Unknown or unauthorized FS use")
 	}
-	id := GetID(fsid, 1, 0)
+	id := formic.GetID(fsid, 1, 0)
 	n, err := o.GetChunk(ctx, id)
 	if len(n) == 0 {
 		log.Println("Creating new root at ", id)
