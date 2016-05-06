@@ -490,7 +490,7 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 		if len(b) == 0 {
 			// If we get an empty value, skip for now
 			// TODO: Figure out how we should handle this
-			log.Printf("ERR: Received an empty chunk for id %s", dirent.Id)
+			log.Printf("ERR: Received an empty chunk for id %v", dirent.Id)
 			continue
 		}
 		n := &pb.InodeEntry{}
