@@ -62,6 +62,12 @@ func main() {
 	}
 
 	cfg := resolveConfig(nil)
+	var logDebug func(formt string, args ...interface{})
+	if cfg.debug {
+		logDebug = func(formt string, args ...interface{}) {
+			fmt.Printf("DEBUG: "+formt, args)
+		}
+	}
 
 	setupMetrics(cfg.metricsAddr, cfg.metricsCollectors)
 
@@ -111,6 +117,7 @@ func main() {
 	}
 
 	vstore := api.NewReplValueStore(&api.ReplValueStoreConfig{
+		LogDebug:                   logDebug,
 		AddressIndex:               2,
 		StoreFTLSConfig:            vtlsConfig,
 		GRPCOpts:                   vcOpts,
@@ -125,6 +132,7 @@ func main() {
 	}
 
 	gstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
+		LogDebug:                   logDebug,
 		AddressIndex:               2,
 		StoreFTLSConfig:            gtlsConfig,
 		GRPCOpts:                   gcOpts,
