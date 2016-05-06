@@ -65,7 +65,12 @@ func main() {
 	var logDebug func(formt string, args ...interface{})
 	if cfg.debug {
 		logDebug = func(formt string, args ...interface{}) {
-			fmt.Printf("DEBUG: "+formt, args)
+			if formt != "" && formt[len(formt)-1] == '\n' {
+				formt = "DEBUG: " + formt
+			} else {
+				formt = "DEBUG: " + formt + "\n"
+			}
+			fmt.Printf(formt, args...)
 		}
 	}
 
