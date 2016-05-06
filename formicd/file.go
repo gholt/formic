@@ -487,6 +487,12 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 		if err != nil {
 			continue
 		}
+		if len(b) == 0 {
+			// If we get an empty value, skip for now
+			// TODO: Figure out how we should handle this
+			log.Printf("ERR: Received an empty chunk for id %s", dirent.Id)
+			continue
+		}
 		n := &pb.InodeEntry{}
 		err = proto.Unmarshal(b, n)
 		log.Printf("Unmarshaled Inode(%d): %v", dirent.Id, n)
