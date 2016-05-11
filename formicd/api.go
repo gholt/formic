@@ -154,7 +154,7 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 		count := copy(data[cur:], chunk[firstOffset:])
 		firstOffset = 0
 		block += 1
-		cur += int64(len(chunk))
+		cur += int64(count)
 		log.Printf("Read %d bytes", count)
 		if int64(len(chunk)) < s.blocksize {
 			break
