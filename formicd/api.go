@@ -21,9 +21,10 @@ import (
 
 type apiServer struct {
 	sync.RWMutex
-	fs        FileService
-	fl        *flother.Flother
-	blocksize int64
+	fs         FileService
+	fl         *flother.Flother
+	blocksize  int64
+	updateChan chan *UpdateItem
 }
 
 func NewApiServer(fs FileService, nodeId int) *apiServer {
@@ -33,6 +34,9 @@ func NewApiServer(fs FileService, nodeId int) *apiServer {
 	log.Println("NodeID: ", nodeId)
 	s.fl = flother.NewFlother(time.Time{}, uint64(nodeId))
 	s.blocksize = int64(1024 * 64) // Default Block Size (64K)
+	s.updateChan = make(chan *UpdateItem, 1000)
+	updates := newUpdatinator(s.updateChan, fs)
+	go updates.run()
 	return s
 }
 
@@ -226,7 +230,14 @@ func (s *apiServer) Write(ctx context.Context, r *pb.WriteRequest) (*pb.WriteRes
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
-		err = s.fs.Update(ctx, formic.GetID(fsid.Bytes(), r.Inode, 0), block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
+		s.updateChan <- &UpdateItem{
+			id:        formic.GetID(fsid.Bytes(), r.Inode, 0),
+			block:     block,
+			blocksize: uint64(s.blocksize),
+			size:      uint64(len(payload)),
+			mtime:     time.Now().Unix(),
+		}
+		//err = s.fs.Update(ctx, formic.GetID(fsid.Bytes(), r.Inode, 0), block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
 		if err != nil {
 			return &pb.WriteResponse{Status: 1}, err
 		}
