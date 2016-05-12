@@ -588,8 +588,9 @@ func (o *OortFS) Update(ctx context.Context, id []byte, block, blocksize, size u
 		n.LastBlock = size
 		n.Attr.Size = blocksize*block + size
 	}
-
-	n.Attr.Mtime = mtime
+	if mtime > n.Attr.Mtime {
+		n.Attr.Mtime = mtime
+	}
 	b, err = proto.Marshal(n)
 	if err != nil {
 		return err

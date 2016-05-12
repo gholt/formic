@@ -100,6 +100,15 @@ func (s *apiServer) Create(ctx context.Context, r *pb.CreateRequest) (*pb.Create
 		Gid:    r.Attr.Gid,
 	}
 	rname, rattr, err := s.fs.Create(ctx, formic.GetID(fsid.Bytes(), r.Parent, 0), formic.GetID(fsid.Bytes(), inode, 0), inode, r.Name, attr, false)
+	if err != nil {
+		return nil, err
+	}
+	// Write the first block
+	// TODO: Need to handle failure here better
+	err = s.fs.WriteChunk(ctx, formic.GetID(fsid.Bytes(), inode, 1), nil)
+	if err != nil {
+		return nil, err
+	}
 	return &pb.CreateResponse{Name: rname, Attr: rattr}, err
 }
 
@@ -148,7 +157,6 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 			return &pb.ReadResponse{}, err
 		}
 		if len(chunk) == 0 {
-			log.Printf("Err: Read 0 Bytes")
 			break
 		}
 		count := copy(data[cur:], chunk[firstOffset:])
