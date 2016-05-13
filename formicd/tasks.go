@@ -3,22 +3,11 @@ package main
 import (
 	"log"
 
-	"google.golang.org/grpc/peer"
-
 	"github.com/creiht/formic"
 	"github.com/gholt/store"
 
 	"golang.org/x/net/context"
 )
-
-type localAddr struct{}
-
-func (l localAddr) String() string {
-	return "internal"
-}
-func (l localAddr) Network() string {
-	return "internal"
-}
 
 type UpdateItem struct {
 	id        []byte
@@ -46,10 +35,7 @@ func (u *Updatinator) run() {
 		toupdate := <-u.in
 		log.Println("Updating: ", toupdate)
 		// TODO: Need better context
-		p := &peer.Peer{
-			Addr: localAddr{},
-		}
-		ctx := peer.NewContext(context.Background(), p)
+		ctx := context.Background()
 		err := u.fs.Update(ctx, toupdate.id, toupdate.block, toupdate.blocksize, toupdate.size, toupdate.mtime)
 		if err != nil {
 			log.Println("Update failed, requeing: ", err)
@@ -81,10 +67,7 @@ func (d *Deletinator) run() {
 		todelete := <-d.in
 		log.Println("Deleting: ", todelete)
 		// TODO: Need better context
-		p := &peer.Peer{
-			Addr: localAddr{},
-		}
-		ctx := peer.NewContext(context.Background(), p)
+		ctx := context.Background()
 		// Get the dir entry info
 		dirent, err := d.fs.GetDirent(ctx, todelete.parent, todelete.name)
 		if store.IsNotFound(err) {
