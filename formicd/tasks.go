@@ -52,7 +52,7 @@ func (u *Updatinator) run() {
 		ctx := peer.NewContext(context.Background(), p)
 		err := u.fs.Update(ctx, toupdate.id, toupdate.block, toupdate.blocksize, toupdate.size, toupdate.mtime)
 		if err != nil {
-			log.Println("Delete failed, requeing: ", err)
+			log.Println("Update failed, requeing: ", err)
 			u.in <- toupdate
 		}
 	}
@@ -103,7 +103,6 @@ func (d *Deletinator) run() {
 		ts := dirent.Tombstone
 		deleted := uint64(0)
 		for b := uint64(0); b < ts.Blocks; b++ {
-			log.Println("  Deleting block: ", b)
 			// Delete each block
 			id := formic.GetID(ts.FsId, ts.Inode, b+1)
 			err := d.fs.DeleteChunk(ctx, id, ts.Dtime)
@@ -114,14 +113,12 @@ func (d *Deletinator) run() {
 		}
 		if deleted == ts.Blocks {
 			// Everything is deleted so delete the entry
-			log.Println("  Deleting Inode")
 			err := d.fs.DeleteChunk(ctx, formic.GetID(ts.FsId, ts.Inode, 0), ts.Dtime)
 			if err != nil && !store.IsNotFound(err) && err != ErrStoreHasNewerValue {
 				// Couldn't delete the inode entry so try again later
 				d.in <- todelete
 				continue
 			}
-			log.Println("  Deleting Listing")
 			err = d.fs.DeleteListing(ctx, todelete.parent, todelete.name, ts.Dtime)
 			if err != nil && !store.IsNotFound(err) && err != ErrStoreHasNewerValue {
 				log.Println("  Err: ", err)

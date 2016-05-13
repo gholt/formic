@@ -149,12 +149,10 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 	if r.Offset%s.blocksize != 0 {
 		// Handle non-aligned offset
 		firstOffset = r.Offset - int64(block)*s.blocksize
-		log.Printf("Offset: %d, firstOffset: %d", r.Offset, firstOffset)
 	}
 	cur := int64(0)
 	for cur < r.Size {
 		id := formic.GetID(fsid.Bytes(), r.Inode, block+1) // block 0 is for inode data
-		log.Printf("Reading Inode: %d, Block: %d ID: %d", r.Inode, block, id)
 		chunk, err := s.fs.GetChunk(ctx, id)
 		if err != nil {
 			log.Print("Err: Failed to read block: ", err)
@@ -167,7 +165,6 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 		firstOffset = 0
 		block += 1
 		cur += int64(count)
-		log.Printf("Read %d bytes", count)
 		if int64(len(chunk)) < s.blocksize {
 			break
 		}
@@ -189,13 +186,12 @@ func (s *apiServer) Write(ctx context.Context, r *pb.WriteRequest) (*pb.WriteRes
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("WRITE: Inode %d Offset: %d Size: %d", r.Inode, r.Offset, len(r.Payload))
 	block := uint64(r.Offset / s.blocksize)
-	// TODO: Handle unaligned offsets
 	firstOffset := int64(0)
 	if r.Offset%s.blocksize != 0 {
 		// Handle non-aligned offset
 		firstOffset = r.Offset - int64(block)*s.blocksize
-		log.Printf("Offset: %d, firstOffset: %d", r.Offset, firstOffset)
 	}
 	cur := int64(0)
 	for cur < int64(len(r.Payload)) {
@@ -209,9 +205,9 @@ func (s *apiServer) Write(ctx context.Context, r *pb.WriteRequest) (*pb.WriteRes
 			// need to get the block and update
 			chunk := make([]byte, firstOffset+int64(len(payload)))
 			data, err := s.fs.GetChunk(ctx, id)
-			if firstOffset > 0 && (err != nil || len(data) == 0) {
-				// TODO: Need better error handling for when there is a block but it can't retreive it
-				log.Printf("ERR: couldn't get block id %d", id)
+			if firstOffset > 0 && err != nil {
+				// TODO: How do we differentiate a block that hasn't been created yet, and a block that is truely missing?
+				log.Printf("WARN: couldn't get block id %d", id)
 			} else {
 				if len(data) > len(chunk) {
 					chunk = data
@@ -219,12 +215,10 @@ func (s *apiServer) Write(ctx context.Context, r *pb.WriteRequest) (*pb.WriteRes
 					copy(chunk, data)
 				}
 			}
-			log.Printf("DATA LEN: %d CHUNK LEN: %d", len(data), len(chunk))
 			copy(chunk[firstOffset:], payload)
 			payload = chunk
 			firstOffset = 0
 		}
-		log.Printf("Writing Inode: %d Block: %d ID: %d Len: %d", r.Inode, block, id, sendSize)
 		err := s.fs.WriteChunk(ctx, id, payload)
 		// TODO: Need better error handling for failing with multiple chunks
 		if err != nil {
@@ -236,10 +230,6 @@ func (s *apiServer) Write(ctx context.Context, r *pb.WriteRequest) (*pb.WriteRes
 			blocksize: uint64(s.blocksize),
 			size:      uint64(len(payload)),
 			mtime:     time.Now().Unix(),
-		}
-		//err = s.fs.Update(ctx, formic.GetID(fsid.Bytes(), r.Inode, 0), block, uint64(s.blocksize), uint64(len(payload)), time.Now().Unix())
-		if err != nil {
-			return &pb.WriteResponse{Status: 1}, err
 		}
 		cur += sendSize
 		block += 1

@@ -464,7 +464,6 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 	}
 	// Get the keys from the group
 	items, err := o.comms.ReadGroup(ctx, id)
-	log.Println("ITEMS: ", items)
 	if err != nil {
 		// TODO: Needs beter error handling
 		log.Println("Error looking up group: ", err)
@@ -495,7 +494,6 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 		}
 		n := &pb.InodeEntry{}
 		err = proto.Unmarshal(b, n)
-		log.Printf("Unmarshaled Inode(%d): %v", dirent.Id, n)
 		if err != nil {
 			continue
 		}
