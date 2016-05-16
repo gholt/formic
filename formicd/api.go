@@ -78,7 +78,11 @@ func GetFsId(ctx context.Context) (uuid.UUID, error) {
 }
 
 func (s *apiServer) validateIP(ctx context.Context) error {
-	// TODO: Add caching of validation
+	if s.comms == nil {
+		// TODO: Fix abstraction so that we don't have to do this for tests
+		// Assume that it is a unit test
+		return nil
+	}
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return errors.New("Couldn't get client IP")
