@@ -228,7 +228,10 @@ func (s *apiServer) Read(ctx context.Context, r *pb.ReadRequest) (*pb.ReadRespon
 		chunk, err := s.fs.GetChunk(ctx, id)
 		if err != nil {
 			log.Print("Err: Failed to read block: ", err)
-			return &pb.ReadResponse{}, err
+			// NOTE: This returns basically 0's to the client.for this block in this case
+			//       It is totally valid for a fs to request an invalid block
+			// TODO: Do we need to differentiate between real errors and bad requests?
+			return &pb.ReadResponse{}, nil
 		}
 		if len(chunk) == 0 {
 			break
