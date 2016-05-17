@@ -91,13 +91,13 @@ var FSAttrList = []string{"name"}
 
 // NewFileSystemAPIServer ...
 func NewFileSystemAPIServer(store store.GroupStore) *FileSystemAPIServer {
-	fsas := new(FileSystemAPIServer)
-	fsas.gstore = store
-	return fsas
+	s := new(FileSystemAPIServer)
+	s.gstore = store
+	return s
 }
 
 // CreateFS ...
-func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSRequest) (*fb.CreateFSResponse, error) {
+func (s *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSRequest) (*fb.CreateFSResponse, error) {
 	var err error
 	var acctID string
 	srcAddr := ""
@@ -113,7 +113,7 @@ func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReq
 	}
 
 	// Validate Token
-	acctID, err = fsas.validateToken(r.Token)
+	acctID, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s CREATE FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -133,7 +133,7 @@ func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReq
 		log.Printf("%s  CREATE FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
 	}
-	_, err = fsas.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsRefByte)
+	_, err = s.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsRefByte)
 	if err != nil {
 		log.Printf("%s CREATE FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
@@ -141,7 +141,7 @@ func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReq
 	// write /acct/acctID				FSID						FileSysRef
 	pKey = fmt.Sprintf("/acct/%s", acctID)
 	pKeyA, pKeyB = murmur3.Sum128([]byte(pKey))
-	_, err = fsas.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsRefByte)
+	_, err = s.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsRefByte)
 	if err != nil {
 		log.Printf("%s CREATE FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
@@ -159,7 +159,7 @@ func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReq
 		log.Printf("%s  CREATE FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
 	}
-	_, err = fsas.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsSysAttrByte)
+	_, err = s.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, fsSysAttrByte)
 	if err != nil {
 		log.Printf("%s CREATE FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
@@ -172,7 +172,7 @@ func (fsas *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReq
 }
 
 // ShowFS ...
-func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest) (*fb.ShowFSResponse, error) {
+func (s *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest) (*fb.ShowFSResponse, error) {
 	var err error
 	srcAddr := ""
 
@@ -183,7 +183,7 @@ func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest
 	}
 
 	// Validate Token
-	_, err = fsas.validateToken(r.Token)
+	_, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s SHOW FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -201,7 +201,7 @@ func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest
 	pKey := fmt.Sprintf("/fs")
 	pKeyA, pKeyB := murmur3.Sum128([]byte(pKey))
 	cKeyA, cKeyB := murmur3.Sum128([]byte(fs.ID))
-	_, value, err = fsas.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
+	_, value, err = s.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
 	if store.IsNotFound(err) {
 		log.Printf("%s SHOW FAILED %s NOTFOUND", srcAddr, r.FSid)
 		return nil, errf(codes.NotFound, "%v", "Not Found")
@@ -223,7 +223,7 @@ func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest
 	pKey = fmt.Sprintf("/fs/%s", fs.ID)
 	pKeyA, pKeyB = murmur3.Sum128([]byte(pKey))
 	cKeyA, cKeyB = murmur3.Sum128([]byte("name"))
-	_, value, err = fsas.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
+	_, value, err = s.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
 	if store.IsNotFound(err) {
 		log.Printf("%s SHOW FAILED %s NAMENOTFOUND", srcAddr, r.FSid)
 		return nil, errf(codes.NotFound, "%v", "File System Name Not Found")
@@ -243,7 +243,7 @@ func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest
 	// group-lookup printf("/fs/%s/addr", FSID)
 	pKey = fmt.Sprintf("/fs/%s/addr", fs.ID)
 	pKeyA, pKeyB = murmur3.Sum128([]byte(pKey))
-	items, err := fsas.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
+	items, err := s.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
 	if !store.IsNotFound(err) {
 		// No addr granted
 		aList = make([]string, len(items))
@@ -273,7 +273,7 @@ func (fsas *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest
 }
 
 // ListFS ...
-func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest) (*fb.ListFSResponse, error) {
+func (s *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest) (*fb.ListFSResponse, error) {
 	srcAddr := ""
 	// Get incomming ip
 	pr, ok := peer.FromContext(ctx)
@@ -281,7 +281,7 @@ func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest
 		srcAddr = pr.Addr.String()
 	}
 	// Validate Token
-	acctID, err := fsas.validateToken(r.Token)
+	acctID, err := s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s LIST FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -296,7 +296,7 @@ func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest
 	// Read Group /acct/acctID				_						FileSysRef
 	pKey := fmt.Sprintf("/acct/%s", acctID)
 	pKeyA, pKeyB := murmur3.Sum128([]byte(pKey))
-	list, err := fsas.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
+	list, err := s.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
 	if err != nil {
 		log.Printf("%s LIST FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
@@ -319,7 +319,7 @@ func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest
 		pKey = fmt.Sprintf("/fs/%s", fsList[k].ID)
 		pKeyA, pKeyB = murmur3.Sum128([]byte(pKey))
 		cKeyA, cKeyB := murmur3.Sum128([]byte("name"))
-		_, value, err = fsas.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
+		_, value, err = s.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
 		if store.IsNotFound(err) {
 			log.Printf("%s LIST FAILED %s NAMENOTFOUND", srcAddr, fsList[k].ID)
 			return nil, errf(codes.NotFound, "%v", "File System Name Not Found")
@@ -338,7 +338,7 @@ func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest
 		// Get List of addrs
 		pKey = fmt.Sprintf("/fs/%s/addr", fsList[k].ID)
 		pKeyA, pKeyB = murmur3.Sum128([]byte(pKey))
-		items, err := fsas.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
+		items, err := s.gstore.ReadGroup(context.Background(), pKeyA, pKeyB)
 		if !store.IsNotFound(err) {
 			// No addr granted
 			aList = make([]string, len(items))
@@ -369,7 +369,7 @@ func (fsas *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest
 }
 
 // DeleteFS ...
-func (fsas *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSRequest) (*fb.DeleteFSResponse, error) {
+func (s *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSRequest) (*fb.DeleteFSResponse, error) {
 	var err error
 	srcAddr := ""
 	// Get incomming ip
@@ -379,7 +379,7 @@ func (fsas *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSReq
 	}
 
 	// validate Token
-	_, err = fsas.validateToken(r.Token)
+	_, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s DELETE FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -392,7 +392,7 @@ func (fsas *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSReq
 }
 
 // UpdateFS ...
-func (fsas *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSRequest) (*fb.UpdateFSResponse, error) {
+func (s *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSRequest) (*fb.UpdateFSResponse, error) {
 	var err error
 	srcAddr := ""
 	// Get incomming ip
@@ -402,7 +402,7 @@ func (fsas *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSReq
 	}
 
 	// validate Token
-	_, err = fsas.validateToken(r.Token)
+	_, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s UPDATE FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -415,7 +415,7 @@ func (fsas *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSReq
 }
 
 // GrantAddrFS ...
-func (fsas *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAddrFSRequest) (*fb.GrantAddrFSResponse, error) {
+func (s *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAddrFSRequest) (*fb.GrantAddrFSResponse, error) {
 	var err error
 	var addrData AddrRef
 	var addrByte []byte
@@ -427,7 +427,7 @@ func (fsas *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAdd
 		srcAddr = pr.Addr.String()
 	}
 	// validate token
-	_, err = fsas.validateToken(r.Token)
+	_, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s GRANT FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -446,7 +446,7 @@ func (fsas *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAdd
 		log.Printf("%s GRANT FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
 	}
-	_, err = fsas.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, addrByte)
+	_, err = s.gstore.Write(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro, addrByte)
 	if err != nil {
 		log.Printf("%s GRANT FAILED %v\n", srcAddr, err)
 		return nil, errf(codes.Internal, "%v", err)
@@ -459,7 +459,7 @@ func (fsas *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAdd
 }
 
 // RevokeAddrFS ...
-func (fsas *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeAddrFSRequest) (*fb.RevokeAddrFSResponse, error) {
+func (s *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeAddrFSRequest) (*fb.RevokeAddrFSResponse, error) {
 	var err error
 	srcAddr := ""
 
@@ -469,7 +469,7 @@ func (fsas *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeA
 		srcAddr = pr.Addr.String()
 	}
 	// Validate Token
-	_, err = fsas.validateToken(r.Token)
+	_, err = s.validateToken(r.Token)
 	if err != nil {
 		log.Printf("%s REVOKE FAILED %s\n", srcAddr, "PermissionDenied")
 		return nil, errf(codes.PermissionDenied, "%v", "Invalid Token")
@@ -481,7 +481,7 @@ func (fsas *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeA
 	pKeyA, pKeyB := murmur3.Sum128([]byte(pKey))
 	cKeyA, cKeyB := murmur3.Sum128([]byte(r.Addr))
 	timestampMicro := brimtime.TimeToUnixMicro(time.Now())
-	_, err = fsas.gstore.Delete(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro)
+	_, err = s.gstore.Delete(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, timestampMicro)
 	if store.IsNotFound(err) {
 		log.Printf("%s REVOKE FAILED %s %s\n", srcAddr, r.FSid, r.Addr)
 		return nil, errf(codes.NotFound, "%v", "Not Found")
@@ -494,7 +494,7 @@ func (fsas *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeA
 }
 
 // validateToken ...
-func (fsas *FileSystemAPIServer) validateToken(t string) (string, error) {
+func (s *FileSystemAPIServer) validateToken(t string) (string, error) {
 	var tData TokenRef
 	var aData AcctPayLoad
 	var tDataByte []byte
@@ -504,7 +504,7 @@ func (fsas *FileSystemAPIServer) validateToken(t string) (string, error) {
 	// Read Token
 	pKeyA, pKeyB := murmur3.Sum128([]byte("/token"))
 	cKeyA, cKeyB := murmur3.Sum128([]byte(t))
-	_, tDataByte, err = fsas.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
+	_, tDataByte, err = s.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
 	if store.IsNotFound(err) {
 		return "", errors.New("Not Found")
 	}
@@ -517,7 +517,7 @@ func (fsas *FileSystemAPIServer) validateToken(t string) (string, error) {
 	// Read Account
 	pKeyA, pKeyB = murmur3.Sum128([]byte("/acct"))
 	cKeyA, cKeyB = murmur3.Sum128([]byte(tData.AcctID))
-	_, aDataByte, err = fsas.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
+	_, aDataByte, err = s.gstore.Read(context.Background(), pKeyA, pKeyB, cKeyA, cKeyB, nil)
 	if store.IsNotFound(err) {
 		return "", errors.New("Not Found")
 	}

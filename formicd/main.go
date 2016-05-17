@@ -175,15 +175,8 @@ func main() {
 	fs := NewOortFS(comms)
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.port))
 	FatalIf(err, "Failed to bind formicd to port")
-	pb.RegisterApiServer(s, NewApiServer(fs, cfg.nodeId, comms))
-	grpclog.Printf("Starting up formic api on %d...\n", cfg.port)
-	s.Serve(l)
-
-	// starting up file system api
-	fsL, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.fsPort))
-	FatalIf(err, "Failed to bind file system api to port")
 	fb.RegisterFileSystemAPIServer(s, NewFileSystemAPIServer(fsgstore))
-	grpclog.Printf("Starting up file system api on %d...\n", cfg.fsPort)
-	s.Serve(fsL)
-
+	pb.RegisterApiServer(s, NewApiServer(fs, cfg.nodeId, comms))
+	grpclog.Printf("Starting up formic and the file system api on %d...\n", cfg.port)
+	s.Serve(l)
 }
