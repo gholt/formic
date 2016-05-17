@@ -34,13 +34,12 @@ service Api {
 message DirEnt {
     string name   = 1;
     uint64 parent = 2;
-    Attr   attr   = 3;
+    uint32 type   = 3;
 }
 
 // DirEntries just contains a list of directory entries
 message DirEntries {
     repeated DirEnt DirEntries  = 1;
-    repeated DirEnt FileEntries = 2;
 }
 
 // Attr
@@ -162,7 +161,6 @@ message ReadDirAllRequest {
 // ReadDirAllResponse
 message ReadDirAllResponse {
     repeated DirEnt DirEntries  = 1;
-    repeated DirEnt FileEntries = 2;
 }
 
 // SymlinkRequest
@@ -295,6 +293,7 @@ message DirEntry {
     string    name      = 2;
     bytes     id        = 3;
     Tombstone tombstone = 4; // If set, this record has been deleted
+    uint32    type      = 5;
 }
 
 // FileBlock
