@@ -319,15 +319,8 @@ func (f *fs) handleRead(r *fuse.ReadRequest) {
 			for _, de := range d.DirEntries {
 				data = fuse.AppendDirent(data, fuse.Dirent{
 					Name:  de.Name,
-					Inode: de.Attr.Inode,
-					Type:  fuse.DT_Dir,
-				})
-			}
-			for _, fe := range d.FileEntries {
-				data = fuse.AppendDirent(data, fuse.Dirent{
-					Name:  fe.Name,
-					Inode: fe.Attr.Inode,
-					Type:  fuse.DT_File,
+					Inode: 1, // TODO: seems to work fine with any non-zero inode.  why?
+					Type:  fuse.DirentType(de.Type),
 				})
 			}
 			f.handles.cacheRead(r.Handle, data)

@@ -171,12 +171,6 @@ func (s *apiServer) Create(ctx context.Context, r *pb.CreateRequest) (*pb.Create
 	if err != nil {
 		return nil, err
 	}
-	// Write the first block
-	// TODO: Need to handle failure here better
-	err = s.fs.WriteChunk(ctx, formic.GetID(fsid.Bytes(), inode, 1), nil)
-	if err != nil {
-		return nil, err
-	}
 	return &pb.CreateResponse{Name: rname, Attr: rattr}, err
 }
 
