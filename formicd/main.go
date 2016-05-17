@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
+	fb "github.com/creiht/formic/fsproto"
 	pb "github.com/creiht/formic/proto"
 	"github.com/pandemicsyn/ftls"
 	"github.com/pandemicsyn/oort/api"
@@ -148,17 +149,41 @@ func main() {
 		ConcurrentRequestsPerStore: cfg.concurrentRequestsPerStore,
 	})
 	if gerr := gstore.Startup(context.Background()); gerr != nil {
-		grpclog.Fatalln("Cannot start valuestore connector:", gerr)
+		grpclog.Fatalln("Cannot start groupstore connector:", gerr)
 	}
 
+	fsgstore := api.NewReplGroupStore(&api.ReplGroupStoreConfig{
+		LogDebug:                   logDebug,
+		AddressIndex:               2,
+		StoreFTLSConfig:            gtlsConfig,
+		GRPCOpts:                   gcOpts,
+		RingServer:                 cfg.oortGroupSyndicate,
+		RingCachePath:              path.Join(cfg.path, "ring/groupstore.ring"),
+		RingServerGRPCOpts:         []grpc.DialOption{grOpts},
+		RingClientID:               clientID,
+		ConcurrentRequestsPerStore: cfg.concurrentRequestsPerStore,
+	})
+	if fsgerr := fsgstore.Startup(context.Background()); fsgerr != nil {
+		grpclog.Fatalln("Cannot start groupstore connector for file system api:", fsgerr)
+	}
+
+	// starting up formicd
 	comms, err := NewStoreComms(vstore, gstore)
 	if err != nil {
 		grpclog.Fatalln(err)
 	}
 	fs := NewOortFS(comms)
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.port))
-	FatalIf(err, "Failed to bind to port")
+	FatalIf(err, "Failed to bind formicd to port")
 	pb.RegisterApiServer(s, NewApiServer(fs, cfg.nodeId, comms))
-	grpclog.Printf("Starting up on %d...\n", cfg.port)
+	grpclog.Printf("Starting up formic api on %d...\n", cfg.port)
 	s.Serve(l)
+
+	// starting up file system api
+	fsL, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.fsPort))
+	FatalIf(err, "Failed to bind file system api to port")
+	fb.RegisterFileSystemAPIServer(s, NewFileSystemAPIServer(fsgstore))
+	grpclog.Printf("Starting up file system api on %d...\n", cfg.fsPort)
+	s.Serve(fsL)
+
 }
