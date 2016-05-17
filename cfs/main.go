@@ -17,7 +17,7 @@ import (
 	pb "github.com/creiht/formic/proto"
 	mb "github.com/letterj/oohhc/proto/filesystem"
 
-	"bazil.org/fuse"
+	"github.com/getcfs/fuse"
 	"github.com/pkg/profile"
 	"github.com/satori/go.uuid"
 	"google.golang.org/grpc"

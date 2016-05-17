@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"bazil.org/fuse"
+	"github.com/getcfs/fuse"
 
 	"github.com/creiht/formic"
 	pb "github.com/creiht/formic/proto"

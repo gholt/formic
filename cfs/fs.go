@@ -12,8 +12,8 @@ import (
 
 	pb "github.com/creiht/formic/proto"
 
-	"bazil.org/fuse"
-	"bazil.org/fuse/fuseutil"
+	"github.com/getcfs/fuse"
+	"github.com/getcfs/fuse/fuseutil"
 )
 
 const (
