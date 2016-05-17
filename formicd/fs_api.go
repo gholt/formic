@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"time"
 
-	fb "github.com/creiht/formic/fsproto"
+	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
 	"github.com/gholt/store"
 	"github.com/satori/go.uuid"
@@ -97,7 +97,7 @@ func NewFileSystemAPIServer(store store.GroupStore) *FileSystemAPIServer {
 }
 
 // CreateFS ...
-func (s *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSRequest) (*fb.CreateFSResponse, error) {
+func (s *FileSystemAPIServer) CreateFS(ctx context.Context, r *pb.CreateFSRequest) (*pb.CreateFSResponse, error) {
 	var err error
 	var acctID string
 	srcAddr := ""
@@ -168,11 +168,11 @@ func (s *FileSystemAPIServer) CreateFS(ctx context.Context, r *fb.CreateFSReques
 	// Return File System UUID
 	// Log Operation
 	log.Printf("%s CREATE SUCCESS %s\n", srcAddr, fsID)
-	return &fb.CreateFSResponse{Data: fsID}, nil
+	return &pb.CreateFSResponse{Data: fsID}, nil
 }
 
 // ShowFS ...
-func (s *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest) (*fb.ShowFSResponse, error) {
+func (s *FileSystemAPIServer) ShowFS(ctx context.Context, r *pb.ShowFSRequest) (*pb.ShowFSResponse, error) {
 	var err error
 	srcAddr := ""
 
@@ -269,11 +269,11 @@ func (s *FileSystemAPIServer) ShowFS(ctx context.Context, r *fb.ShowFSRequest) (
 	}
 	// Log Operation
 	log.Printf("%s SHOW SUCCESS %s\n", srcAddr, r.FSid)
-	return &fb.ShowFSResponse{Data: string(fsJSON)}, nil
+	return &pb.ShowFSResponse{Data: string(fsJSON)}, nil
 }
 
 // ListFS ...
-func (s *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest) (*fb.ListFSResponse, error) {
+func (s *FileSystemAPIServer) ListFS(ctx context.Context, r *pb.ListFSRequest) (*pb.ListFSResponse, error) {
 	srcAddr := ""
 	// Get incomming ip
 	pr, ok := peer.FromContext(ctx)
@@ -365,11 +365,11 @@ func (s *FileSystemAPIServer) ListFS(ctx context.Context, r *fb.ListFSRequest) (
 	}
 	// Log Operation
 	log.Printf("%s LIST SUCCESS %s\n", srcAddr, acctID)
-	return &fb.ListFSResponse{Data: string(fsListJSON)}, nil
+	return &pb.ListFSResponse{Data: string(fsListJSON)}, nil
 }
 
 // DeleteFS ...
-func (s *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSRequest) (*fb.DeleteFSResponse, error) {
+func (s *FileSystemAPIServer) DeleteFS(ctx context.Context, r *pb.DeleteFSRequest) (*pb.DeleteFSResponse, error) {
 	var err error
 	srcAddr := ""
 	// Get incomming ip
@@ -388,11 +388,11 @@ func (s *FileSystemAPIServer) DeleteFS(ctx context.Context, r *fb.DeleteFSReques
 	// Prep things to return
 	// Log Operation
 	log.Printf("%s DELETE NOTIMPLEMENTED %s\n", srcAddr, r.FSid)
-	return &fb.DeleteFSResponse{Data: "Delete Operation not supported at this time"}, nil
+	return &pb.DeleteFSResponse{Data: "Delete Operation not supported at this time"}, nil
 }
 
 // UpdateFS ...
-func (s *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSRequest) (*fb.UpdateFSResponse, error) {
+func (s *FileSystemAPIServer) UpdateFS(ctx context.Context, r *pb.UpdateFSRequest) (*pb.UpdateFSResponse, error) {
 	var err error
 	srcAddr := ""
 	// Get incomming ip
@@ -411,11 +411,11 @@ func (s *FileSystemAPIServer) UpdateFS(ctx context.Context, r *fb.UpdateFSReques
 	// return message
 	// Log Operation
 	log.Printf("%s UPDATE NOTIMPLEMENTED %s\n", srcAddr, r.FSid)
-	return &fb.UpdateFSResponse{Data: "UPDATE operation is not supported in EA"}, nil
+	return &pb.UpdateFSResponse{Data: "UPDATE operation is not supported in EA"}, nil
 }
 
 // GrantAddrFS ...
-func (s *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAddrFSRequest) (*fb.GrantAddrFSResponse, error) {
+func (s *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *pb.GrantAddrFSRequest) (*pb.GrantAddrFSResponse, error) {
 	var err error
 	var addrData AddrRef
 	var addrByte []byte
@@ -455,11 +455,11 @@ func (s *FileSystemAPIServer) GrantAddrFS(ctx context.Context, r *fb.GrantAddrFS
 	// return Addr was Granted
 	// Log Operation
 	log.Printf("%s GRANT SUCCESS %s %s\n", srcAddr, r.FSid, r.Addr)
-	return &fb.GrantAddrFSResponse{Data: r.FSid}, nil
+	return &pb.GrantAddrFSResponse{Data: r.FSid}, nil
 }
 
 // RevokeAddrFS ...
-func (s *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeAddrFSRequest) (*fb.RevokeAddrFSResponse, error) {
+func (s *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *pb.RevokeAddrFSRequest) (*pb.RevokeAddrFSResponse, error) {
 	var err error
 	srcAddr := ""
 
@@ -490,7 +490,7 @@ func (s *FileSystemAPIServer) RevokeAddrFS(ctx context.Context, r *fb.RevokeAddr
 	// return Addr was revoked
 	// Log Operation
 	log.Printf("%s REVOKE SUCCESS %s %s\n", srcAddr, r.FSid, r.Addr)
-	return &fb.RevokeAddrFSResponse{Data: r.FSid}, nil
+	return &pb.RevokeAddrFSResponse{Data: r.FSid}, nil
 }
 
 // validateToken ...

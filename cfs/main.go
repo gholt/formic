@@ -14,9 +14,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/codegangsta/cli"
-	mb "github.com/creiht/formic/fsproto"
 	pb "github.com/creiht/formic/proto"
-
 	"github.com/getcfs/fuse"
 	"github.com/pkg/profile"
 	"github.com/satori/go.uuid"
@@ -93,7 +91,6 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "cfs"
 	app.Usage = "Client used to test filesysd"
-	app.Version = "0.5.0"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:        "token, T",
@@ -123,8 +120,8 @@ func main() {
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.ShowFS(context.Background(), &mb.ShowFSRequest{Token: token, FSid: fsNum})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.ShowFS(context.Background(), &pb.ShowFSRequest{Token: token, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -161,8 +158,8 @@ func main() {
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.CreateFS(context.Background(), &mb.CreateFSRequest{Token: token, FSName: c.String("name")})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.CreateFS(context.Background(), &pb.CreateFSRequest{Token: token, FSName: c.String("name")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -188,8 +185,8 @@ func main() {
 				}
 				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.ListFS(context.Background(), &mb.ListFSRequest{Token: token})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.ListFS(context.Background(), &pb.ListFSRequest{Token: token})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -218,8 +215,8 @@ func main() {
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.DeleteFS(context.Background(), &mb.DeleteFSRequest{Token: token, FSid: fsNum})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.DeleteFS(context.Background(), &pb.DeleteFSRequest{Token: token, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -264,13 +261,13 @@ func main() {
 					fmt.Printf("Invalid File System String: %q\n", c.String("name"))
 					os.Exit(1)
 				}
-				fsMod := &mb.ModFS{
+				fsMod := &pb.ModFS{
 					Name:   c.String("name"),
 					Status: c.String("status"),
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.UpdateFS(context.Background(), &mb.UpdateFSRequest{Token: token, FSid: fsNum, Filesys: fsMod})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.UpdateFS(context.Background(), &pb.UpdateFSRequest{Token: token, FSid: fsNum, Filesys: fsMod})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -311,8 +308,8 @@ func main() {
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.GrantAddrFS(context.Background(), &mb.GrantAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.GrantAddrFS(context.Background(), &pb.GrantAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -353,8 +350,8 @@ func main() {
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.RevokeAddrFS(context.Background(), &mb.RevokeAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
+				ws := pb.NewFileSystemAPIClient(conn)
+				result, err := ws.RevokeAddrFS(context.Background(), &pb.RevokeAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()

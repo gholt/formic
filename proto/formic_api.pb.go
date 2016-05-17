@@ -52,6 +52,21 @@ It has these top-level messages:
 	Tombstone
 	DirEntry
 	FileBlock
+	ModFS
+	CreateFSRequest
+	CreateFSResponse
+	ListFSRequest
+	ListFSResponse
+	ShowFSRequest
+	ShowFSResponse
+	DeleteFSRequest
+	DeleteFSResponse
+	UpdateFSRequest
+	UpdateFSResponse
+	GrantAddrFSRequest
+	GrantAddrFSResponse
+	RevokeAddrFSRequest
+	RevokeAddrFSResponse
 */
 package proto
 
@@ -670,6 +685,173 @@ func (m *FileBlock) String() string            { return proto1.CompactTextString
 func (*FileBlock) ProtoMessage()               {}
 func (*FileBlock) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{42} }
 
+// ModFS ...
+type ModFS struct {
+	Name   string `protobuf:"bytes,1,opt,name=Name" json:"Name,omitempty"`
+	Status string `protobuf:"bytes,2,opt,name=Status" json:"Status,omitempty"`
+}
+
+func (m *ModFS) Reset()                    { *m = ModFS{} }
+func (m *ModFS) String() string            { return proto1.CompactTextString(m) }
+func (*ModFS) ProtoMessage()               {}
+func (*ModFS) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{43} }
+
+// Request to create a new filesystem
+type CreateFSRequest struct {
+	Token  string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSName string `protobuf:"bytes,2,opt,name=FSName" json:"FSName,omitempty"`
+}
+
+func (m *CreateFSRequest) Reset()                    { *m = CreateFSRequest{} }
+func (m *CreateFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*CreateFSRequest) ProtoMessage()               {}
+func (*CreateFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{44} }
+
+// Response from creating a new filesystem
+type CreateFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *CreateFSResponse) Reset()                    { *m = CreateFSResponse{} }
+func (m *CreateFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*CreateFSResponse) ProtoMessage()               {}
+func (*CreateFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{45} }
+
+// Request a list of all file systems for a given account
+type ListFSRequest struct {
+	Token string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+}
+
+func (m *ListFSRequest) Reset()                    { *m = ListFSRequest{} }
+func (m *ListFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*ListFSRequest) ProtoMessage()               {}
+func (*ListFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{46} }
+
+// Response for displaying a list of all an accounts file systems.
+type ListFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *ListFSResponse) Reset()                    { *m = ListFSResponse{} }
+func (m *ListFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*ListFSResponse) ProtoMessage()               {}
+func (*ListFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{47} }
+
+// Request to show the specific details about a file system
+type ShowFSRequest struct {
+	Token string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSid  string `protobuf:"bytes,2,opt,name=FSid" json:"FSid,omitempty"`
+}
+
+func (m *ShowFSRequest) Reset()                    { *m = ShowFSRequest{} }
+func (m *ShowFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*ShowFSRequest) ProtoMessage()               {}
+func (*ShowFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{48} }
+
+// Response for a specific file system for an account.
+type ShowFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *ShowFSResponse) Reset()                    { *m = ShowFSResponse{} }
+func (m *ShowFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*ShowFSResponse) ProtoMessage()               {}
+func (*ShowFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{49} }
+
+// Request to delete a specific file system
+type DeleteFSRequest struct {
+	Token string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSid  string `protobuf:"bytes,2,opt,name=FSid" json:"FSid,omitempty"`
+}
+
+func (m *DeleteFSRequest) Reset()                    { *m = DeleteFSRequest{} }
+func (m *DeleteFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*DeleteFSRequest) ProtoMessage()               {}
+func (*DeleteFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{50} }
+
+// Response from deleting a file system
+type DeleteFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *DeleteFSResponse) Reset()                    { *m = DeleteFSResponse{} }
+func (m *DeleteFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*DeleteFSResponse) ProtoMessage()               {}
+func (*DeleteFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{51} }
+
+// Request to update a specific file system's information
+type UpdateFSRequest struct {
+	Token   string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSid    string `protobuf:"bytes,2,opt,name=FSid" json:"FSid,omitempty"`
+	Filesys *ModFS `protobuf:"bytes,4,opt,name=Filesys" json:"Filesys,omitempty"`
+}
+
+func (m *UpdateFSRequest) Reset()                    { *m = UpdateFSRequest{} }
+func (m *UpdateFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*UpdateFSRequest) ProtoMessage()               {}
+func (*UpdateFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{52} }
+
+func (m *UpdateFSRequest) GetFilesys() *ModFS {
+	if m != nil {
+		return m.Filesys
+	}
+	return nil
+}
+
+// Response from an update operation
+type UpdateFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *UpdateFSResponse) Reset()                    { *m = UpdateFSResponse{} }
+func (m *UpdateFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*UpdateFSResponse) ProtoMessage()               {}
+func (*UpdateFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{53} }
+
+// Request grant an ip address access to a file system
+type GrantAddrFSRequest struct {
+	Token string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSid  string `protobuf:"bytes,2,opt,name=FSid" json:"FSid,omitempty"`
+	Addr  string `protobuf:"bytes,3,opt,name=Addr" json:"Addr,omitempty"`
+}
+
+func (m *GrantAddrFSRequest) Reset()                    { *m = GrantAddrFSRequest{} }
+func (m *GrantAddrFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*GrantAddrFSRequest) ProtoMessage()               {}
+func (*GrantAddrFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{54} }
+
+// Response from granting ip address access to a file system
+type GrantAddrFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *GrantAddrFSResponse) Reset()                    { *m = GrantAddrFSResponse{} }
+func (m *GrantAddrFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*GrantAddrFSResponse) ProtoMessage()               {}
+func (*GrantAddrFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{55} }
+
+// Request revoke an ip address access to a file system
+type RevokeAddrFSRequest struct {
+	Token string `protobuf:"bytes,1,opt,name=Token" json:"Token,omitempty"`
+	FSid  string `protobuf:"bytes,2,opt,name=FSid" json:"FSid,omitempty"`
+	Addr  string `protobuf:"bytes,3,opt,name=Addr" json:"Addr,omitempty"`
+}
+
+func (m *RevokeAddrFSRequest) Reset()                    { *m = RevokeAddrFSRequest{} }
+func (m *RevokeAddrFSRequest) String() string            { return proto1.CompactTextString(m) }
+func (*RevokeAddrFSRequest) ProtoMessage()               {}
+func (*RevokeAddrFSRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{56} }
+
+// Response from revoking ip address access to a file system
+type RevokeAddrFSResponse struct {
+	Data string `protobuf:"bytes,1,opt,name=Data" json:"Data,omitempty"`
+}
+
+func (m *RevokeAddrFSResponse) Reset()                    { *m = RevokeAddrFSResponse{} }
+func (m *RevokeAddrFSResponse) String() string            { return proto1.CompactTextString(m) }
+func (*RevokeAddrFSResponse) ProtoMessage()               {}
+func (*RevokeAddrFSResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{57} }
+
 func init() {
 	proto1.RegisterType((*DirEnt)(nil), "proto.DirEnt")
 	proto1.RegisterType((*DirEntries)(nil), "proto.DirEntries")
@@ -714,6 +896,21 @@ func init() {
 	proto1.RegisterType((*Tombstone)(nil), "proto.Tombstone")
 	proto1.RegisterType((*DirEntry)(nil), "proto.DirEntry")
 	proto1.RegisterType((*FileBlock)(nil), "proto.FileBlock")
+	proto1.RegisterType((*ModFS)(nil), "proto.ModFS")
+	proto1.RegisterType((*CreateFSRequest)(nil), "proto.CreateFSRequest")
+	proto1.RegisterType((*CreateFSResponse)(nil), "proto.CreateFSResponse")
+	proto1.RegisterType((*ListFSRequest)(nil), "proto.ListFSRequest")
+	proto1.RegisterType((*ListFSResponse)(nil), "proto.ListFSResponse")
+	proto1.RegisterType((*ShowFSRequest)(nil), "proto.ShowFSRequest")
+	proto1.RegisterType((*ShowFSResponse)(nil), "proto.ShowFSResponse")
+	proto1.RegisterType((*DeleteFSRequest)(nil), "proto.DeleteFSRequest")
+	proto1.RegisterType((*DeleteFSResponse)(nil), "proto.DeleteFSResponse")
+	proto1.RegisterType((*UpdateFSRequest)(nil), "proto.UpdateFSRequest")
+	proto1.RegisterType((*UpdateFSResponse)(nil), "proto.UpdateFSResponse")
+	proto1.RegisterType((*GrantAddrFSRequest)(nil), "proto.GrantAddrFSRequest")
+	proto1.RegisterType((*GrantAddrFSResponse)(nil), "proto.GrantAddrFSResponse")
+	proto1.RegisterType((*RevokeAddrFSRequest)(nil), "proto.RevokeAddrFSRequest")
+	proto1.RegisterType((*RevokeAddrFSResponse)(nil), "proto.RevokeAddrFSResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1343,6 +1540,267 @@ var _Api_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitFs",
 			Handler:    _Api_InitFs_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{},
+}
+
+// Client API for FileSystemAPI service
+
+type FileSystemAPIClient interface {
+	CreateFS(ctx context.Context, in *CreateFSRequest, opts ...grpc.CallOption) (*CreateFSResponse, error)
+	ListFS(ctx context.Context, in *ListFSRequest, opts ...grpc.CallOption) (*ListFSResponse, error)
+	ShowFS(ctx context.Context, in *ShowFSRequest, opts ...grpc.CallOption) (*ShowFSResponse, error)
+	DeleteFS(ctx context.Context, in *DeleteFSRequest, opts ...grpc.CallOption) (*DeleteFSResponse, error)
+	UpdateFS(ctx context.Context, in *UpdateFSRequest, opts ...grpc.CallOption) (*UpdateFSResponse, error)
+	GrantAddrFS(ctx context.Context, in *GrantAddrFSRequest, opts ...grpc.CallOption) (*GrantAddrFSResponse, error)
+	RevokeAddrFS(ctx context.Context, in *RevokeAddrFSRequest, opts ...grpc.CallOption) (*RevokeAddrFSResponse, error)
+}
+
+type fileSystemAPIClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewFileSystemAPIClient(cc *grpc.ClientConn) FileSystemAPIClient {
+	return &fileSystemAPIClient{cc}
+}
+
+func (c *fileSystemAPIClient) CreateFS(ctx context.Context, in *CreateFSRequest, opts ...grpc.CallOption) (*CreateFSResponse, error) {
+	out := new(CreateFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/CreateFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) ListFS(ctx context.Context, in *ListFSRequest, opts ...grpc.CallOption) (*ListFSResponse, error) {
+	out := new(ListFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/ListFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) ShowFS(ctx context.Context, in *ShowFSRequest, opts ...grpc.CallOption) (*ShowFSResponse, error) {
+	out := new(ShowFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/ShowFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) DeleteFS(ctx context.Context, in *DeleteFSRequest, opts ...grpc.CallOption) (*DeleteFSResponse, error) {
+	out := new(DeleteFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/DeleteFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) UpdateFS(ctx context.Context, in *UpdateFSRequest, opts ...grpc.CallOption) (*UpdateFSResponse, error) {
+	out := new(UpdateFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/UpdateFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) GrantAddrFS(ctx context.Context, in *GrantAddrFSRequest, opts ...grpc.CallOption) (*GrantAddrFSResponse, error) {
+	out := new(GrantAddrFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/GrantAddrFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *fileSystemAPIClient) RevokeAddrFS(ctx context.Context, in *RevokeAddrFSRequest, opts ...grpc.CallOption) (*RevokeAddrFSResponse, error) {
+	out := new(RevokeAddrFSResponse)
+	err := grpc.Invoke(ctx, "/proto.FileSystemAPI/RevokeAddrFS", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for FileSystemAPI service
+
+type FileSystemAPIServer interface {
+	CreateFS(context.Context, *CreateFSRequest) (*CreateFSResponse, error)
+	ListFS(context.Context, *ListFSRequest) (*ListFSResponse, error)
+	ShowFS(context.Context, *ShowFSRequest) (*ShowFSResponse, error)
+	DeleteFS(context.Context, *DeleteFSRequest) (*DeleteFSResponse, error)
+	UpdateFS(context.Context, *UpdateFSRequest) (*UpdateFSResponse, error)
+	GrantAddrFS(context.Context, *GrantAddrFSRequest) (*GrantAddrFSResponse, error)
+	RevokeAddrFS(context.Context, *RevokeAddrFSRequest) (*RevokeAddrFSResponse, error)
+}
+
+func RegisterFileSystemAPIServer(s *grpc.Server, srv FileSystemAPIServer) {
+	s.RegisterService(&_FileSystemAPI_serviceDesc, srv)
+}
+
+func _FileSystemAPI_CreateFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).CreateFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/CreateFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).CreateFS(ctx, req.(*CreateFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_ListFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).ListFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/ListFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).ListFS(ctx, req.(*ListFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_ShowFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShowFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).ShowFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/ShowFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).ShowFS(ctx, req.(*ShowFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_DeleteFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).DeleteFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/DeleteFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).DeleteFS(ctx, req.(*DeleteFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_UpdateFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).UpdateFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/UpdateFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).UpdateFS(ctx, req.(*UpdateFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_GrantAddrFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantAddrFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).GrantAddrFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/GrantAddrFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).GrantAddrFS(ctx, req.(*GrantAddrFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FileSystemAPI_RevokeAddrFS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeAddrFSRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FileSystemAPIServer).RevokeAddrFS(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.FileSystemAPI/RevokeAddrFS",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FileSystemAPIServer).RevokeAddrFS(ctx, req.(*RevokeAddrFSRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _FileSystemAPI_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.FileSystemAPI",
+	HandlerType: (*FileSystemAPIServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateFS",
+			Handler:    _FileSystemAPI_CreateFS_Handler,
+		},
+		{
+			MethodName: "ListFS",
+			Handler:    _FileSystemAPI_ListFS_Handler,
+		},
+		{
+			MethodName: "ShowFS",
+			Handler:    _FileSystemAPI_ShowFS_Handler,
+		},
+		{
+			MethodName: "DeleteFS",
+			Handler:    _FileSystemAPI_DeleteFS_Handler,
+		},
+		{
+			MethodName: "UpdateFS",
+			Handler:    _FileSystemAPI_UpdateFS_Handler,
+		},
+		{
+			MethodName: "GrantAddrFS",
+			Handler:    _FileSystemAPI_GrantAddrFS_Handler,
+		},
+		{
+			MethodName: "RevokeAddrFS",
+			Handler:    _FileSystemAPI_RevokeAddrFS_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{},
