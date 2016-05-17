@@ -14,8 +14,8 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/codegangsta/cli"
+	mb "github.com/creiht/formic/fsproto"
 	pb "github.com/creiht/formic/proto"
-	mb "github.com/letterj/oohhc/proto/filesystem"
 
 	"github.com/getcfs/fuse"
 	"github.com/pkg/profile"
@@ -87,7 +87,6 @@ func main() {
 
 	// Process command line arguments
 	var token string
-	var acctNum string
 	var fsNum string
 	var serverAddr string
 
@@ -108,7 +107,7 @@ func main() {
 		{
 			Name:      "show",
 			Usage:     "Show a File Systems",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid>",
+			ArgsUsage: "<region>://<file system uuid>",
 			Action: func(c *cli.Context) error {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for show.")
@@ -118,29 +117,28 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.ShowFS(context.Background(), &mb.ShowFSRequest{Acctnum: acctNum, FSid: fsNum, Token: token})
+				result, err := ws.ShowFS(context.Background(), &mb.ShowFSRequest{Token: token, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				log.Printf("SHOW Results: %s", result.Payload)
+				log.Printf("SHOW Results: %s", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "create",
 			Usage:     "Create a File Systems",
-			ArgsUsage: "<region>://<account uuid> -N <file system name>",
+			ArgsUsage: "<region>:// -N <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "name, N",
@@ -157,29 +155,28 @@ func main() {
 					fmt.Println("Token is required")
 				}
 				// For create serverAddr and acctnum are required
-				serverAddr, acctNum, _ = parseurl(c.Args().Get(0), "8448")
+				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
 				if c.String("name") == "" {
 					fmt.Println("File system name is a required field.")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.CreateFS(context.Background(), &mb.CreateFSRequest{Acctnum: acctNum, FSName: c.String("name"), Token: token})
+				result, err := ws.CreateFS(context.Background(), &mb.CreateFSRequest{Token: token, FSName: c.String("name")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				log.Printf("Create Results: %s", result.Payload)
+				log.Printf("Create Results: %s", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "list",
 			Usage:     "List File Systems for an account",
-			ArgsUsage: "<region>://<account uuid>",
+			ArgsUsage: "<region>://",
 			Action: func(c *cli.Context) error {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for list.")
@@ -189,25 +186,24 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, _ = parseurl(c.Args().Get(0), "8448")
+				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.ListFS(context.Background(), &mb.ListFSRequest{Acctnum: acctNum, Token: token})
+				result, err := ws.ListFS(context.Background(), &mb.ListFSRequest{Token: token})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				log.Printf("LIST Results: %s", result.Payload)
+				log.Printf("LIST Results: %s", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "delete",
 			Usage:     "Delete a File Systems",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid>",
+			ArgsUsage: "<region>://<file system uuid>",
 			Action: func(c *cli.Context) error {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for delete.")
@@ -216,29 +212,28 @@ func main() {
 				if token == "" {
 					fmt.Println("Token is required")
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.DeleteFS(context.Background(), &mb.DeleteFSRequest{Acctnum: acctNum, FSid: fsNum, Token: token})
+				result, err := ws.DeleteFS(context.Background(), &mb.DeleteFSRequest{Token: token, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				log.Printf("Delete Results: %s", result.Payload)
+				log.Printf("Delete Results: %s", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "update",
 			Usage:     "Update a File Systems",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid> -o [OPTIONS]",
+			ArgsUsage: "<region>://<file system uuid> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "name, N",
@@ -260,7 +255,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
@@ -275,22 +270,21 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.UpdateFS(context.Background(), &mb.UpdateFSRequest{Acctnum: acctNum, FSid: fsNum, Token: token, Filesys: fsMod})
+				result, err := ws.UpdateFS(context.Background(), &mb.UpdateFSRequest{Token: token, FSid: fsNum, Filesys: fsMod})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				log.Printf("Update Results: %s", result.Payload)
+				log.Printf("Update Results: %s", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "grant",
 			Usage:     "Grant an Addr access to a File Systems",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
+			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "addr",
@@ -311,28 +305,28 @@ func main() {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.GrantAddrFS(context.Background(), &mb.GrantAddrFSRequest{Acctnum: acctNum, FSid: fsNum, Token: token, Addr: c.String("addr")})
+				result, err := ws.GrantAddrFS(context.Background(), &mb.GrantAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
+				log.Printf("Result: %s\n", result.Data)
 				return nil
 			},
 		},
 		{
 			Name:      "revoke",
 			Usage:     "Revoke an Addr's access to a File Systems",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
+			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "addr",
@@ -353,55 +347,21 @@ func main() {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
-				serverAddr, acctNum, fsNum = parseurl(c.Args().Get(0), "8448")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				if fsNum == "" {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.RevokeAddrFS(context.Background(), &mb.RevokeAddrFSRequest{Acctnum: acctNum, FSid: fsNum, Token: token, Addr: c.String("addr")})
+				result, err := ws.RevokeAddrFS(context.Background(), &mb.RevokeAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
 					os.Exit(1)
 				}
 				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
-				return nil
-			},
-		},
-		{
-			Name:      "verify",
-			Usage:     "Verify an Addr has access to a file system",
-			ArgsUsage: "<region>://<account uuid>/<file system uuid> -addr <IP Address>",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "addr",
-					Value: "",
-					Usage: "Address to check",
-				},
-			},
-			Action: func(c *cli.Context) error {
-				if !c.Args().Present() {
-					fmt.Println("Invalid syntax for revoke.")
-					os.Exit(1)
-				}
-				if c.String("addr") == "" {
-					fmt.Println("addr is required")
-					os.Exit(1)
-				}
-				serverAddr, fsNum, _ = parseurl(c.Args().Get(0), "8448")
-				conn := setupWS(serverAddr)
-				ws := mb.NewFileSystemAPIClient(conn)
-				result, err := ws.LookupAddrFS(context.Background(), &mb.LookupAddrFSRequest{FSid: fsNum, Addr: c.String("addr")})
-				if err != nil {
-					log.Fatalf("Bad Request: %v", err)
-					conn.Close()
-					os.Exit(1)
-				}
-				conn.Close()
-				log.Printf("Result: %s\n", result.Status)
+				log.Printf("Result: %s\n", result.Data)
 				return nil
 			},
 		},
@@ -421,7 +381,7 @@ func main() {
 					fmt.Println("Invalid syntax for revoke.")
 					os.Exit(1)
 				}
-				serverAddr, fsNum, _ = parseurl(c.Args().Get(0), "8445")
+				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
 				fsnum, err := uuid.FromString(fsNum)
 				if err != nil {
 					fmt.Print("File System id is not valid: ", err)
@@ -579,7 +539,7 @@ func setupWS(svr string) *grpc.ClientConn {
 }
 
 // parseurl ...
-func parseurl(urlstr string, port string) (string, string, string) {
+func parseurl(urlstr string, port string) (string, string) {
 	// a = string of arguments
 	var srv string
 	u, err := url.Parse(urlstr)
@@ -596,12 +556,5 @@ func parseurl(urlstr string, port string) (string, string, string) {
 		fmt.Printf("Invalid region %s\n", u.Scheme)
 		os.Exit(1)
 	}
-	if u.Host == "" {
-		fmt.Println("Invalid URL no account or file system id")
-		os.Exit(1)
-	}
-	if u.Path != "" {
-		return srv, u.Host, u.Path[1:]
-	}
-	return srv, u.Host, u.Path
+	return srv, u.Host
 }
