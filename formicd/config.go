@@ -40,14 +40,6 @@ func resolveConfig(c *config) *config {
 	if cfg.port == 0 {
 		cfg.port = 8445
 	}
-	//	if env := os.Getenv("FSAPI_PORT"); env != "" {
-	//		if val, err := strconv.Atoi(env); err == nil {
-	//			cfg.fsPort = val
-	//		}
-	//	}
-	//	if cfg.fsPort == 0 {
-	//		cfg.fsPort = 8448
-	//	}
 	if env := os.Getenv("FORMICD_OORT_VALUE_SYNDICATE"); env != "" {
 		log.Println("Value: ", env)
 		cfg.oortValueSyndicate = env
