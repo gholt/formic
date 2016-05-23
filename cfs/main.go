@@ -13,13 +13,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/codegangsta/cli"
 	pb "github.com/creiht/formic/proto"
 	"github.com/getcfs/fuse"
 	"github.com/pkg/profile"
 	"github.com/satori/go.uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"gopkg.in/urfave/cli.v2"
 )
 
 type server struct {
@@ -96,7 +96,7 @@ func main() {
 			Name:        "token, T",
 			Value:       "",
 			Usage:       "Access token",
-			EnvVar:      "OOHHC_TOKEN_KEY",
+			EnvVars:     []string{"OOHHC_TOKEN_KEY"},
 			Destination: &token,
 		},
 	}
