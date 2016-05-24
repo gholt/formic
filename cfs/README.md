@@ -14,7 +14,7 @@ mv cfs mount.cfs /sbin/
 cfs -T <token> create iad:// -N <fs_name>
 # grant access to the filesystem
 ifconfig
-cfs -T <token> grant iad://<fs_id> -addr <ip> 
+cfs -T <token> grant iad://<fs_id> -addr <ip>
 # mount the filesystem
 mkdir -p /mnt/<fs_name>
 echo “iad://<fs_id> /mnt/<fs_name> cfs rw 0 0” >> /etc/fstab
@@ -36,6 +36,6 @@ cfs -T <token> grant iad://<fs id> -addr <ip>
 # revoke an ip's access
 cfs -T <token> revoke iad://<fs id> -addr <ip>
 
-# Both DELETE and UPDATE file system operations are not 
+# Both DELETE and UPDATE file system operations are not
 #   implemented in at this time
 ```
