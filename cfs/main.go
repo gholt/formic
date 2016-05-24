@@ -22,6 +22,11 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
+var regions = map[string]string{
+	"aio": "127.0.0.1",
+	"iad": "api.ea.iad.rackfs.com",
+}
+
 type server struct {
 	fs *fs
 	wg sync.WaitGroup
@@ -89,6 +94,8 @@ func main() {
 	var serverAddr string
 	var fsName string
 	var addrValue string
+	var fsRegion string
+	var ok bool
 
 	app := cli.NewApp()
 	app.Name = "cfs"
@@ -138,7 +145,7 @@ func main() {
 		{
 			Name:      "create",
 			Usage:     "Create a File Systems",
-			ArgsUsage: "<region>:// [N|name] <file system name>",
+			ArgsUsage: "[R|region] [aio|iad]  [N|name] <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:        "name",
@@ -146,6 +153,13 @@ func main() {
 					Value:       "",
 					Usage:       "Name of the file system",
 					Destination: &fsName,
+				},
+				cli.StringFlag{
+					Name:        "region",
+					Aliases:     []string{"R"},
+					Value:       "",
+					Usage:       "Target region",
+					Destination: &fsRegion,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -157,7 +171,12 @@ func main() {
 					fmt.Println("Token is required")
 				}
 				// For create serverAddr and acctnum are required
-				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
+				serverAddr, ok = regions[fsRegion]
+				if !ok {
+					fmt.Printf("Invalid region %s", fsRegion)
+					os.Exit(1)
+				}
+				serverAddr = fmt.Sprintf("%s:%s", serverAddr, "8445")
 				if fsName == "" {
 					fmt.Println("File system name is a required field.")
 					os.Exit(1)
@@ -178,7 +197,16 @@ func main() {
 		{
 			Name:      "list",
 			Usage:     "List File Systems for an account",
-			ArgsUsage: "<region>://",
+			ArgsUsage: "[R|region] [aio|iad]",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:        "region",
+					Aliases:     []string{"R"},
+					Value:       "",
+					Usage:       "Target region",
+					Destination: &fsRegion,
+				},
+			},
 			Action: func(c *cli.Context) error {
 				if !c.Args().Present() {
 					fmt.Println("Invalid syntax for list.")
@@ -188,7 +216,12 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
+				serverAddr, ok = regions[fsRegion]
+				if !ok {
+					fmt.Printf("Invalid region %s", fsRegion)
+					os.Exit(1)
+				}
+				serverAddr = fmt.Sprintf("%s:%s", serverAddr, "8445")
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
 				result, err := ws.ListFS(context.Background(), &pb.ListFSRequest{Token: gtoken})
@@ -282,7 +315,7 @@ func main() {
 		{
 			Name:      "grant",
 			Usage:     "Grant an Addr access to a File Systems",
-			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
+			ArgsUsage: "-addr <IP Address>  <region>://<file system uuid>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:        "addr",
@@ -325,7 +358,7 @@ func main() {
 		{
 			Name:      "revoke",
 			Usage:     "Revoke an Addr's access to a File Systems",
-			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
+			ArgsUsage: "-addr <IP Address>  <region>://<file system uuid>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:        "addr",
@@ -540,21 +573,16 @@ func setupWS(svr string) *grpc.ClientConn {
 
 // parseurl ...
 func parseurl(urlstr string, port string) (string, string) {
-	// a = string of arguments
-	var srv string
+
 	u, err := url.Parse(urlstr)
 	if err != nil {
 		fmt.Printf("Url parse error: %v\n", err)
 		os.Exit(1)
 	}
-	switch u.Scheme {
-	case "aio":
-		srv = fmt.Sprintf("127.0.0.1:%s", port)
-	case "iad":
-		srv = fmt.Sprintf("api.ea.iad.rackfs.com:%s", port)
-	default:
-		fmt.Printf("Invalid region %s\n", u.Scheme)
+	srv, ok := regions[u.Scheme]
+	if !ok {
+		fmt.Printf("Invalid region %s", u.Scheme)
 		os.Exit(1)
 	}
-	return srv, u.Host
+	return fmt.Sprintf("%s:%s", srv, port), u.Host
 }
