@@ -204,10 +204,6 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				if !c.Args().Present() {
-					fmt.Println("Invalid syntax for list.")
-					os.Exit(1)
-				}
 				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
