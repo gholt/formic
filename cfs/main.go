@@ -139,7 +139,7 @@ func main() {
 			ArgsUsage: "<region>:// [N|name] <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:    "name, N",
+					Name:    "name",
 					Aliases: []string{"N"},
 					Value:   "",
 					Usage:   "Name of the file system",
