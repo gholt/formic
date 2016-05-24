@@ -163,10 +163,6 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				if !c.Args().Present() {
-					fmt.Println("Invalid syntax for show.")
-					os.Exit(1)
-				}
 				if gtoken == "" {
 					fmt.Println("Token is required")
 				}
