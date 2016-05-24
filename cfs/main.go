@@ -84,7 +84,7 @@ func main() {
 	}
 
 	// Process command line arguments
-	var token string
+	var gtoken string
 	var fsNum string
 	var serverAddr string
 
@@ -93,11 +93,12 @@ func main() {
 	app.Usage = "Client used to test filesysd"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "token, T",
+			Name:        "token",
+			Aliases:     []string{"T"},
 			Value:       "",
 			Usage:       "Access token",
 			EnvVars:     []string{"OOHHC_TOKEN_KEY"},
-			Destination: &token,
+			Destination: &gtoken,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -110,7 +111,7 @@ func main() {
 					fmt.Println("Invalid syntax for show.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
@@ -121,7 +122,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.ShowFS(context.Background(), &pb.ShowFSRequest{Token: token, FSid: fsNum})
+				result, err := ws.ShowFS(context.Background(), &pb.ShowFSRequest{Token: gtoken, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -135,12 +136,13 @@ func main() {
 		{
 			Name:      "create",
 			Usage:     "Create a File Systems",
-			ArgsUsage: "<region>:// -N <file system name>",
+			ArgsUsage: "<region>:// [N|name] <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "name, N",
-					Value: "",
-					Usage: "Name of the file system",
+					Name:    "name, N",
+					Aliases: []string{"N"},
+					Value:   "",
+					Usage:   "Name of the file system",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -148,7 +150,7 @@ func main() {
 					fmt.Println("Invalid syntax for show.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 				}
 				// For create serverAddr and acctnum are required
@@ -159,7 +161,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.CreateFS(context.Background(), &pb.CreateFSRequest{Token: token, FSName: c.String("name")})
+				result, err := ws.CreateFS(context.Background(), &pb.CreateFSRequest{Token: gtoken, FSName: c.String("name")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -179,14 +181,14 @@ func main() {
 					fmt.Println("Invalid syntax for list.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
 				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.ListFS(context.Background(), &pb.ListFSRequest{Token: token})
+				result, err := ws.ListFS(context.Background(), &pb.ListFSRequest{Token: gtoken})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -206,7 +208,7 @@ func main() {
 					fmt.Println("Invalid syntax for delete.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 				}
 				serverAddr, fsNum = parseurl(c.Args().Get(0), "8445")
@@ -216,7 +218,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.DeleteFS(context.Background(), &pb.DeleteFSRequest{Token: token, FSid: fsNum})
+				result, err := ws.DeleteFS(context.Background(), &pb.DeleteFSRequest{Token: gtoken, FSid: fsNum})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -233,14 +235,10 @@ func main() {
 			ArgsUsage: "<region>://<file system uuid> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "name, N",
-					Value: "",
-					Usage: "Name of the file system",
-				},
-				cli.StringFlag{
-					Name:  "S, status",
-					Value: "",
-					Usage: "Status of the file system",
+					Name:    "name",
+					Aliases: []string{"N"},
+					Value:   "",
+					Usage:   "Name of the file system",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -248,7 +246,7 @@ func main() {
 					fmt.Println("Invalid syntax for update.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
@@ -262,12 +260,11 @@ func main() {
 					os.Exit(1)
 				}
 				fsMod := &pb.ModFS{
-					Name:   c.String("name"),
-					Status: c.String("status"),
+					Name: c.String("name"),
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.UpdateFS(context.Background(), &pb.UpdateFSRequest{Token: token, FSid: fsNum, Filesys: fsMod})
+				result, err := ws.UpdateFS(context.Background(), &pb.UpdateFSRequest{Token: gtoken, FSid: fsNum, Filesys: fsMod})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -294,7 +291,7 @@ func main() {
 					fmt.Println("Invalid syntax for delete.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
@@ -309,7 +306,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.GrantAddrFS(context.Background(), &pb.GrantAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
+				result, err := ws.GrantAddrFS(context.Background(), &pb.GrantAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -336,7 +333,7 @@ func main() {
 					fmt.Println("Invalid syntax for revoke.")
 					os.Exit(1)
 				}
-				if token == "" {
+				if gtoken == "" {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
@@ -351,7 +348,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.RevokeAddrFS(context.Background(), &pb.RevokeAddrFSRequest{Token: token, FSid: fsNum, Addr: c.String("addr")})
+				result, err := ws.RevokeAddrFS(context.Background(), &pb.RevokeAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: c.String("addr")})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
