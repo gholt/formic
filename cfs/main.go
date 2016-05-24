@@ -87,6 +87,8 @@ func main() {
 	var gtoken string
 	var fsNum string
 	var serverAddr string
+	var fsName string
+	var addrValue string
 
 	app := cli.NewApp()
 	app.Name = "cfs"
@@ -139,10 +141,11 @@ func main() {
 			ArgsUsage: "<region>:// [N|name] <file system name>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:    "name",
-					Aliases: []string{"N"},
-					Value:   "",
-					Usage:   "Name of the file system",
+					Name:        "name",
+					Aliases:     []string{"N"},
+					Value:       "",
+					Usage:       "Name of the file system",
+					Destination: &fsName,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -155,13 +158,13 @@ func main() {
 				}
 				// For create serverAddr and acctnum are required
 				serverAddr, _ = parseurl(c.Args().Get(0), "8445")
-				if c.String("name") == "" {
+				if fsName == "" {
 					fmt.Println("File system name is a required field.")
 					os.Exit(1)
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.CreateFS(context.Background(), &pb.CreateFSRequest{Token: gtoken, FSName: c.String("name")})
+				result, err := ws.CreateFS(context.Background(), &pb.CreateFSRequest{Token: gtoken, FSName: fsName})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -235,10 +238,11 @@ func main() {
 			ArgsUsage: "<region>://<file system uuid> -o [OPTIONS]",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:    "name",
-					Aliases: []string{"N"},
-					Value:   "",
-					Usage:   "Name of the file system",
+					Name:        "name",
+					Aliases:     []string{"N"},
+					Value:       "",
+					Usage:       "Name of the file system",
+					Destination: &fsName,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -255,8 +259,8 @@ func main() {
 					fmt.Println("Missing file system id")
 					os.Exit(1)
 				}
-				if c.String("name") != "" {
-					fmt.Printf("Invalid File System String: %q\n", c.String("name"))
+				if fsName != "" {
+					fmt.Printf("Invalid File System String: %q\n", fsName)
 					os.Exit(1)
 				}
 				fsMod := &pb.ModFS{
@@ -281,9 +285,10 @@ func main() {
 			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "addr",
-					Value: "",
-					Usage: "Address to Grant",
+					Name:        "addr",
+					Value:       "",
+					Usage:       "Address to Grant",
+					Destination: &addrValue,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -295,7 +300,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				if c.String("addr") == "" {
+				if addrValue == "" {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
@@ -306,7 +311,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.GrantAddrFS(context.Background(), &pb.GrantAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: c.String("addr")})
+				result, err := ws.GrantAddrFS(context.Background(), &pb.GrantAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: addrValue})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
@@ -323,9 +328,10 @@ func main() {
 			ArgsUsage: "<region>://<file system uuid> -addr <IP Address>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "addr",
-					Value: "",
-					Usage: "Address to Revoke",
+					Name:        "addr",
+					Value:       "",
+					Usage:       "Address to Revoke",
+					Destination: &addrValue,
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -337,7 +343,7 @@ func main() {
 					fmt.Println("Token is required")
 					os.Exit(1)
 				}
-				if c.String("addr") == "" {
+				if addrValue == "" {
 					fmt.Println("addr is required")
 					os.Exit(1)
 				}
@@ -348,7 +354,7 @@ func main() {
 				}
 				conn := setupWS(serverAddr)
 				ws := pb.NewFileSystemAPIClient(conn)
-				result, err := ws.RevokeAddrFS(context.Background(), &pb.RevokeAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: c.String("addr")})
+				result, err := ws.RevokeAddrFS(context.Background(), &pb.RevokeAddrFSRequest{Token: gtoken, FSid: fsNum, Addr: addrValue})
 				if err != nil {
 					log.Fatalf("Bad Request: %v", err)
 					conn.Close()
