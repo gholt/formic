@@ -15,7 +15,6 @@ import (
 	pb "github.com/creiht/formic/proto"
 	"github.com/gholt/brimtime"
 	"github.com/gholt/store"
-	"github.com/gogo/protobuf/proto"
 	"github.com/spaolacci/murmur3"
 	"golang.org/x/net/context"
 )
@@ -207,7 +206,7 @@ func (o *OortFS) InitFs(ctx context.Context, fsid []byte) error {
 			Uid:    1001, // TODO: need to config default user/group id
 			Gid:    1001,
 		}
-		b, err := proto.Marshal(r)
+		b, err := formic.Marshal(r)
 		if err != nil {
 			return err
 		}
@@ -225,7 +224,7 @@ func (o *OortFS) GetAttr(ctx context.Context, id []byte) (*pb.Attr, error) {
 		return &pb.Attr{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.Attr{}, err
 	}
@@ -239,7 +238,7 @@ func (o *OortFS) SetAttr(ctx context.Context, id []byte, attr *pb.Attr, v uint32
 		return &pb.Attr{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.Attr{}, err
 	}
@@ -265,7 +264,7 @@ func (o *OortFS) SetAttr(ctx context.Context, id []byte, attr *pb.Attr, v uint32
 	if valid.Gid() {
 		n.Attr.Gid = attr.Gid
 	}
-	b, err = proto.Marshal(n)
+	b, err = formic.Marshal(n)
 	if err != nil {
 		return &pb.Attr{}, err
 	}
@@ -284,14 +283,16 @@ func (o *OortFS) Create(ctx context.Context, parent, id []byte, inode uint64, na
 		// TODO: Needs beter error handling
 		return "", &pb.Attr{}, err
 	}
-	p := &pb.DirEntry{}
-	err = proto.Unmarshal(b, p)
-	if err != nil {
-		return "", &pb.Attr{}, err
-	}
-	// Return an error if entry already exists and is not a tombstone
-	if len(b) > 0 && p.Tombstone == nil {
-		return "", &pb.Attr{}, nil
+	if len(b) > 0 {
+		p := &pb.DirEntry{}
+		err = formic.Unmarshal(b, p)
+		if err != nil {
+			return "", &pb.Attr{}, err
+		}
+		// Return an error if entry already exists and is not a tombstone
+		if p.Tombstone == nil {
+			return "", &pb.Attr{}, nil
+		}
 	}
 	var direntType fuse.DirentType
 	if isdir {
@@ -306,7 +307,7 @@ func (o *OortFS) Create(ctx context.Context, parent, id []byte, inode uint64, na
 		Id:      id,
 		Type:    uint32(direntType),
 	}
-	b, err = proto.Marshal(d)
+	b, err = formic.Marshal(d)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -322,7 +323,7 @@ func (o *OortFS) Create(ctx context.Context, parent, id []byte, inode uint64, na
 		Attr:    attr,
 		Blocks:  0,
 	}
-	b, err = proto.Marshal(n)
+	b, err = formic.Marshal(n)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -342,7 +343,7 @@ func (o *OortFS) Lookup(ctx context.Context, parent []byte, name string) (string
 		return "", &pb.Attr{}, err
 	}
 	d := &pb.DirEntry{}
-	err = proto.Unmarshal(b, d)
+	err = formic.Unmarshal(b, d)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -355,7 +356,7 @@ func (o *OortFS) Lookup(ctx context.Context, parent []byte, name string) (string
 		return "", &pb.Attr{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return "", &pb.Attr{}, err
 	}
@@ -389,7 +390,7 @@ func (o *OortFS) ReadDirAll(ctx context.Context, id []byte) (*pb.ReadDirAllRespo
 	e := &pb.ReadDirAllResponse{}
 	dirent := &pb.DirEntry{}
 	for _, item := range items {
-		err = proto.Unmarshal(item.Value, dirent)
+		err = formic.Unmarshal(item.Value, dirent)
 		if err != nil {
 			return &pb.ReadDirAllResponse{}, err
 		}
@@ -412,7 +413,7 @@ func (o *OortFS) Remove(ctx context.Context, parent []byte, name string) (int32,
 		return 1, err
 	}
 	d := &pb.DirEntry{}
-	err = proto.Unmarshal(b, d)
+	err = formic.Unmarshal(b, d)
 	if err != nil {
 		return 1, err
 	}
@@ -431,7 +432,7 @@ func (o *OortFS) Remove(ctx context.Context, parent []byte, name string) (int32,
 	t.Blocks = inode.Blocks
 	t.Inode = inode.Inode
 	d.Tombstone = t
-	b, err = proto.Marshal(d)
+	b, err = formic.Marshal(d)
 	if err != nil {
 		return 1, err
 	}
@@ -453,7 +454,7 @@ func (o *OortFS) Update(ctx context.Context, id []byte, block, blocksize, size u
 		return err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return err
 	}
@@ -470,7 +471,7 @@ func (o *OortFS) Update(ctx context.Context, id []byte, block, blocksize, size u
 	if mtime > n.Attr.Mtime {
 		n.Attr.Mtime = mtime
 	}
-	b, err = proto.Marshal(n)
+	b, err = formic.Marshal(n)
 	if err != nil {
 		return err
 	}
@@ -499,7 +500,7 @@ func (o *OortFS) Symlink(ctx context.Context, parent, id []byte, name string, ta
 		Target:  target,
 		Attr:    attr,
 	}
-	b, err := proto.Marshal(n)
+	b, err := formic.Marshal(n)
 	if err != nil {
 		return &pb.SymlinkResponse{}, err
 	}
@@ -514,7 +515,7 @@ func (o *OortFS) Symlink(ctx context.Context, parent, id []byte, name string, ta
 		Id:      id,
 		Type:    uint32(fuse.DT_File),
 	}
-	b, err = proto.Marshal(d)
+	b, err = formic.Marshal(d)
 	if err != nil {
 		return &pb.SymlinkResponse{}, err
 	}
@@ -531,7 +532,7 @@ func (o *OortFS) Readlink(ctx context.Context, id []byte) (*pb.ReadlinkResponse,
 		return &pb.ReadlinkResponse{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.ReadlinkResponse{}, err
 	}
@@ -544,7 +545,7 @@ func (o *OortFS) Getxattr(ctx context.Context, id []byte, name string) (*pb.Getx
 		return &pb.GetxattrResponse{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.GetxattrResponse{}, err
 	}
@@ -560,7 +561,7 @@ func (o *OortFS) Setxattr(ctx context.Context, id []byte, name string, value []b
 		return &pb.SetxattrResponse{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.SetxattrResponse{}, err
 	}
@@ -568,7 +569,7 @@ func (o *OortFS) Setxattr(ctx context.Context, id []byte, name string, value []b
 		n.Xattr = make(map[string][]byte)
 	}
 	n.Xattr[name] = value
-	b, err = proto.Marshal(n)
+	b, err = formic.Marshal(n)
 	if err != nil {
 		return &pb.SetxattrResponse{}, err
 	}
@@ -586,7 +587,7 @@ func (o *OortFS) Listxattr(ctx context.Context, id []byte) (*pb.ListxattrRespons
 		return &pb.ListxattrResponse{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.ListxattrResponse{}, err
 	}
@@ -605,12 +606,12 @@ func (o *OortFS) Removexattr(ctx context.Context, id []byte, name string) (*pb.R
 		return &pb.RemovexattrResponse{}, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return &pb.RemovexattrResponse{}, err
 	}
 	delete(n.Xattr, name)
-	b, err = proto.Marshal(n)
+	b, err = formic.Marshal(n)
 	if err != nil {
 		return &pb.RemovexattrResponse{}, err
 	}
@@ -631,14 +632,14 @@ func (o *OortFS) Rename(ctx context.Context, oldParent, newParent []byte, oldNam
 		return &pb.RenameResponse{}, err
 	}
 	d := &pb.DirEntry{}
-	err = proto.Unmarshal(b, d)
+	err = formic.Unmarshal(b, d)
 	if err != nil {
 		return &pb.RenameResponse{}, err
 	}
 	// TODO: Handle orphaned data from overwrites
 	// Create new entry
 	d.Name = newName
-	b, err = proto.Marshal(d)
+	b, err = formic.Marshal(d)
 	err = o.comms.WriteGroup(ctx, newParent, []byte(newName), b)
 	if err != nil {
 		return &pb.RenameResponse{}, err
@@ -662,7 +663,7 @@ func (o *OortFS) GetChunk(ctx context.Context, id []byte) ([]byte, error) {
 		return nil, err
 	}
 	fb := &pb.FileBlock{}
-	err = proto.Unmarshal(b, fb)
+	err = formic.Unmarshal(b, fb)
 	if err != nil {
 		return nil, err
 	}
@@ -678,7 +679,7 @@ func (o *OortFS) WriteChunk(ctx context.Context, id, data []byte) error {
 		Data:     data,
 		Checksum: crc.Sum32(),
 	}
-	b, err := proto.Marshal(fb)
+	b, err := formic.Marshal(fb)
 	if err != nil {
 		return err
 	}
@@ -700,7 +701,7 @@ func (o *OortFS) GetInode(ctx context.Context, id []byte) (*pb.InodeEntry, error
 		return nil, err
 	}
 	n := &pb.InodeEntry{}
-	err = proto.Unmarshal(b, n)
+	err = formic.Unmarshal(b, n)
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +717,7 @@ func (o *OortFS) GetDirent(ctx context.Context, parent []byte, name string) (*pb
 		return &pb.DirEntry{}, err
 	}
 	d := &pb.DirEntry{}
-	err = proto.Unmarshal(b, d)
+	err = formic.Unmarshal(b, d)
 	if err != nil {
 		return &pb.DirEntry{}, err
 	}
