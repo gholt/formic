@@ -101,7 +101,7 @@ func main() {
 	app.Name = "cfs"
 	app.Usage = "Client used to test filesysd"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "token",
 			Aliases:     []string{"T"},
 			Value:       "",
@@ -110,7 +110,7 @@ func main() {
 			Destination: &gtoken,
 		},
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:      "show",
 			Usage:     "Show a File Systems",
@@ -147,14 +147,14 @@ func main() {
 			Usage:     "Create a File Systems",
 			ArgsUsage: "[R|region] [aio|iad]  [N|name] <file system name>",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "name",
 					Aliases:     []string{"N"},
 					Value:       "",
 					Usage:       "Name of the file system",
 					Destination: &fsName,
 				},
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "region",
 					Aliases:     []string{"R"},
 					Value:       "",
@@ -195,7 +195,7 @@ func main() {
 			Usage:     "List File Systems for an account",
 			ArgsUsage: "[R|region] [aio|iad]",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "region",
 					Aliases:     []string{"R"},
 					Value:       "",
@@ -262,7 +262,7 @@ func main() {
 			Usage:     "Update a File Systems",
 			ArgsUsage: "<region>://<file system uuid> -o [OPTIONS]",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "name",
 					Aliases:     []string{"N"},
 					Value:       "",
@@ -309,7 +309,7 @@ func main() {
 			Usage:     "Grant an Addr access to a File Systems",
 			ArgsUsage: "-addr <IP Address>  <region>://<file system uuid>",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "addr",
 					Value:       "",
 					Usage:       "Address to Grant",
@@ -352,7 +352,7 @@ func main() {
 			Usage:     "Revoke an Addr's access to a File Systems",
 			ArgsUsage: "-addr <IP Address>  <region>://<file system uuid>",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:        "addr",
 					Value:       "",
 					Usage:       "Address to Revoke",
@@ -395,7 +395,7 @@ func main() {
 			Usage:     "mount a file system",
 			ArgsUsage: "<region>://<file system uuid> <mount point> -o [OPTIONS]",
 			Flags: []cli.Flag{
-				cli.StringFlag{
+				&cli.StringFlag{
 					Name:  "o",
 					Value: "",
 					Usage: "mount options",
